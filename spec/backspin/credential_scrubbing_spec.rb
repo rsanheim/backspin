@@ -157,7 +157,7 @@ RSpec.describe "Backspin credential scrubbing" do
 
     it "scrubs passwords in command arguments" do
       result = Backspin.call("args_password") do
-        Open3.capture3("mysql", "-u", "root", "-psupersecretpassword123", "mydb")
+        Open3.capture3("echo", "-psupersecretpassword123", "connecting to database")
       end
 
       record_data = YAML.load_file(result.record_path)
@@ -165,7 +165,7 @@ RSpec.describe "Backspin credential scrubbing" do
 
       args_string = args.join(" ")
       expect(args_string).not_to include("supersecretpassword123")
-      expect(args_string).to match(/mysql -u root \*+ mydb/)
+      expect(args_string).to match(/echo \*+ connecting to database/)
     end
 
     it "handles nested array arguments" do
@@ -204,7 +204,7 @@ RSpec.describe "Backspin credential scrubbing" do
       result = Backspin.call("multiple_commands_with_creds") do
         Open3.capture3("echo", "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE")
         Open3.capture3("curl", "-H", "Authorization: Bearer sk-secret123456789", "https://api.example.com")
-        Open3.capture3("mysql", "-u", "admin", "-pmysupersecretpassword", "production_db")
+        Open3.capture3("echo", "password=mysupersecretpassword", "admin", "connection")
       end
 
       record_data = YAML.load_file(result.record_path)
@@ -222,7 +222,7 @@ RSpec.describe "Backspin credential scrubbing" do
 
       third_args = commands[2]["args"].join(" ")
       expect(third_args).not_to include("mysupersecretpassword")
-      expect(third_args).to include("mysql")
+      expect(third_args).to include("echo")
       expect(third_args).to include("admin")
     end
   end
