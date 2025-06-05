@@ -5,9 +5,12 @@ require "pathname"
 require "ostruct"
 require "rspec/mocks"
 require "backspin/version"
+require "backspin/command_result"
 require "backspin/command"
 require "backspin/record"
 require "backspin/recorder"
+require "backspin/unified_result"
+require "backspin/unified_api"
 
 module Backspin
   class RecordNotFoundError < StandardError; end
