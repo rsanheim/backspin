@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.description = "Backspin is a Ruby library for characterization testing of command-line interfaces. Inspired by VCR's cassette-based approach, it records and replays CLI interactions to make testing faster and more deterministic."
   spec.homepage = "https://github.com/rsanheim/backspin"
   spec.license = "MIT"
-  spec.required_ruby_version = Gem::Requirement.new(">= 2.5.0")
+  spec.required_ruby_version = Gem::Requirement.new(">= 3.1.0")
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = spec.homepage
@@ -25,5 +25,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "rspec-mocks", "~> 3.0"
-  spec.add_dependency "ostruct"
+  spec.add_dependency "ostruct", "~> 0.5.0"
 end
