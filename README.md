@@ -95,7 +95,7 @@ end
 
 If the CLI interaction you are recording contains sensitive data in stdout or stderr, you should be careful to make sure it is not recorded to yaml!
 
-By default, Backspin automatically scrubs [common credential patterns](https://github.com/backspin-rb/backspin/blob/main/lib/backspin/scrubbers.rb) from records, but this will only handle some common cases.
+By default, Backspin automatically scrubs [common credential patterns](https://github.com/rsanheim/backspin/blob/f8661f084aad0ae759cd971c4af31ccf9bdc6bba/lib/backspin.rb#L46-L65) from records, but this will only handle some common cases.
 Always review your record files before commiting them to source control. 
 
 A tool like [trufflehog](https://github.com/trufflesecurity/trufflehog) or [gitleaks](https://github.com/gitleaks/gitleaks) run via a pre-commit to catch any sensitive data before commit. 
