@@ -1,5 +1,7 @@
 # Backspin
 
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/rsanheim/backspin/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/rsanheim/backspin/tree/main)
+
 Backspin records and replays CLI interactions in Ruby for easy snapshot testing of command-line interfaces. Currently supports `Open3.capture3` and `system` and requires `rspec-mocks`.  More system calls and flexible test integration are welcome - PRs welcome!
 
 **NOTE:** Backspin is in early development (version 0.2.x), and you can expect the API to change. It is being developed along-side in-production CLI apps, so the API will be refined and improved as we get to 1.0.
