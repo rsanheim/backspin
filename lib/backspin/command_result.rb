@@ -25,9 +25,9 @@ module Backspin
     # @return [Hash] Hash representation of the result
     def to_h
       {
-        'stdout' => stdout,
-        'stderr' => stderr,
-        'status' => status
+        "stdout" => stdout,
+        "stderr" => stderr,
+        "status" => status
       }
     end
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative 'command_result'
+require_relative "command_result"
 
 module Backspin
   class Command
@@ -13,8 +13,8 @@ module Backspin
 
       # Accept either a CommandResult or individual stdout/stderr/status
       @result = result || CommandResult.new(
-        stdout: stdout || '',
-        stderr: stderr || '',
+        stdout: stdout || "",
+        stderr: stderr || "",
         status: status || 0
       )
     end
@@ -35,12 +35,12 @@ module Backspin
     # Convert to hash for YAML serialization
     def to_h(filter: nil)
       data = {
-        'command_type' => @method_class.name,
-        'args' => scrub_args(@args),
-        'stdout' => Backspin.scrub_text(@result.stdout),
-        'stderr' => Backspin.scrub_text(@result.stderr),
-        'status' => @result.status,
-        'recorded_at' => @recorded_at
+        "command_type" => @method_class.name,
+        "args" => scrub_args(@args),
+        "stdout" => Backspin.scrub_text(@result.stdout),
+        "stderr" => Backspin.scrub_text(@result.stderr),
+        "status" => @result.status,
+        "recorded_at" => @recorded_at
       }
 
       # Apply filter if provided
@@ -52,23 +52,23 @@ module Backspin
     # Create from hash (for loading from YAML)
     def self.from_h(data)
       # Determine method class from command_type
-      method_class = case data['command_type']
-                     when 'Open3::Capture3'
-                       Open3::Capture3
-                     when 'Kernel::System'
-                       ::Kernel::System
-                     else
-                       # Default to capture3 for backwards compatibility
-                       Open3::Capture3
-                     end
+      method_class = case data["command_type"]
+      when "Open3::Capture3"
+        Open3::Capture3
+      when "Kernel::System"
+        ::Kernel::System
+      else
+        # Default to capture3 for backwards compatibility
+        Open3::Capture3
+      end
 
       new(
         method_class: method_class,
-        args: data['args'],
-        stdout: data['stdout'],
-        stderr: data['stderr'],
-        status: data['status'],
-        recorded_at: data['recorded_at']
+        args: data["args"],
+        stdout: data["stdout"],
+        stderr: data["stderr"],
+        status: data["status"],
+        recorded_at: data["recorded_at"]
       )
     end
 

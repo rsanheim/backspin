@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require_relative 'unified_result'
-require_relative 'command_result'
+require_relative "unified_result"
+require_relative "command_result"
 
 module Backspin
   class << self
@@ -14,8 +14,8 @@ module Backspin
     # @option options [Proc] :matcher Custom matcher for verification
     # @return [UnifiedResult] Result object with output and status
     def run(record_name, options = {}, &block)
-      raise ArgumentError, 'record_name is required' if record_name.nil? || record_name.empty?
-      raise ArgumentError, 'block is required' unless block_given?
+      raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
+      raise ArgumentError, "block is required" unless block_given?
 
       record_path = build_record_path(record_name)
       mode = determine_mode(options[:mode], record_path)
@@ -112,7 +112,7 @@ module Backspin
       record = Record.load_or_create(record_path)
 
       raise RecordNotFoundError, "Record not found: #{record_path}" unless record.exists?
-      raise RecordNotFoundError, 'No commands found in record' if record.empty?
+      raise RecordNotFoundError, "No commands found in record" if record.empty?
 
       # For verification, we need to track all commands executed
       recorder = Recorder.new(mode: :verify, record: record)
@@ -146,10 +146,10 @@ module Backspin
 
         # Check if it matches
         command_verified = if options[:matcher]
-                             options[:matcher].call(recorded_command.to_h, actual_result.to_h)
-                           else
-                             recorded_command.result == actual_result
-                           end
+          options[:matcher].call(recorded_command.to_h, actual_result.to_h)
+        else
+          recorded_command.result == actual_result
+        end
 
         verified_commands << {
           command: recorded_command,
@@ -177,8 +177,8 @@ module Backspin
 
         # Create verification result (system only gives us exit status)
         actual_result = CommandResult.new(
-          stdout: '',
-          stderr: '',
+          stdout: "",
+          stderr: "",
           status: result ? 0 : 1
         )
 
@@ -237,7 +237,7 @@ module Backspin
       record = Record.load_or_create(record_path)
 
       raise RecordNotFoundError, "Record not found: #{record_path}" unless record.exists?
-      raise RecordNotFoundError, 'No commands found in record' if record.empty?
+      raise RecordNotFoundError, "No commands found in record" if record.empty?
 
       # Setup replay mode - this will handle returning values for all commands
       recorder = Recorder.new(mode: :replay, record: record)
@@ -259,8 +259,8 @@ module Backspin
       return nil if expected == actual
 
       diff_lines = []
-      expected_lines = (expected || '').lines
-      actual_lines = (actual || '').lines
+      expected_lines = (expected || "").lines
+      actual_lines = (actual || "").lines
 
       max_lines = [expected_lines.length, actual_lines.length].max
 

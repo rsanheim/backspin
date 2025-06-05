@@ -5,13 +5,13 @@ module Backspin
   # Provides a consistent interface whether recording, verifying, or playing back
   class UnifiedResult
     attr_reader :output, :record_path, :commands, :mode, :expected_output, :actual_output, :expected_stderr,
-                :actual_stderr, :expected_status, :actual_status, :diff, :verified_commands
+      :actual_stderr, :expected_status, :actual_status, :diff, :verified_commands
 
     def initialize(output:, mode:, record_path:, commands:, verified: nil,
-                   expected_output: nil, actual_output: nil,
-                   expected_stderr: nil, actual_stderr: nil,
-                   expected_status: nil, actual_status: nil,
-                   diff: nil, verified_commands: nil)
+      expected_output: nil, actual_output: nil,
+      expected_stderr: nil, actual_stderr: nil,
+      expected_status: nil, actual_status: nil,
+      diff: nil, verified_commands: nil)
       @output = output
       @mode = mode
       @record_path = record_path
@@ -46,7 +46,7 @@ module Backspin
     def error_message
       return nil unless verified? == false
 
-      msg = 'Output verification failed'
+      msg = "Output verification failed"
       msg += "\nExpected: #{expected_output.inspect}" if expected_output
       msg += "\nActual: #{actual_output.inspect}" if actual_output
       msg += "\n#{diff}" if diff
