@@ -80,7 +80,7 @@ DEPENDENCIES
   backspin!
   rake (~> 13.0)
   rspec (~> 3.0)
-  standard (~> 1.0)
+  standard
   timecop (~> 0.9)
 
 BUNDLED WITH

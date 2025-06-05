@@ -215,6 +215,5 @@ module Backspin
         commands: record.commands
       )
     end
-
   end
 end
