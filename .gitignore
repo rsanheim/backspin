@@ -2,7 +2,6 @@
 /.yardoc
 /_yardoc/
 /coverage/
-/doc/
 /pkg/
 /spec/reports/
 /tmp/
@@ -15,6 +14,3 @@
 
 # Backspin cassettes
 /tmp/backspin/
-
-# Bundler
-Gemfile.lock
