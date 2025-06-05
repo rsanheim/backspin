@@ -179,21 +179,13 @@ To automatically fix issues:
 bin/rake standard:fix
 ```
 
-### Style Guidelines
-
-- Follow Ruby community conventions
-- Keep methods small and focused
-- Use descriptive variable and method names
-- Add YARD documentation for public APIs
-- Avoid metaprogramming unless necessary
-
 ## Reporting Issues
 
 ### Bug Reports
 
-When reporting bugs, please include:
+When reporting bugs, please include *full logs* including:
 
-1. Ruby version (`ruby -v`)
+1. Ruby version (`ruby -v`) and ruby version manager info
 2. Backspin version
 3. Minimal reproduction code
 4. Expected behavior vs actual behavior
