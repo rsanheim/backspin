@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.3.0] - 2025-06-05
+- Scrub credentials from command arguments
 
 ## [0.2.0] - 2025-06-05
 - First public release of Backspin, extracteed from `name-TBD` CLI tool

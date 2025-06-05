@@ -78,7 +78,6 @@ bin/rake standard               # Run Standard Ruby linter
 ### Debugging Tests
 - Records are saved to `spec/backspin_data/` by default
 - Check YAML files to see recorded command outputs
-- Use `VERBOSE=1` for additional output during tests
 
 ### Updating Credential Patterns
 - Add patterns to `DEFAULT_CREDENTIAL_PATTERNS` in `lib/backspin.rb`

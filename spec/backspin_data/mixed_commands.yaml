@@ -1,5 +1,5 @@
 ---
-first_recorded_at: '2025-06-05T02:25:37-05:00'
+first_recorded_at: '2025-06-05T03:33:44-05:00'
 format_version: '2.0'
 commands:
 - command_type: Open3::Capture3
@@ -11,7 +11,7 @@ commands:
     '
   stderr: ''
   status: 0
-  recorded_at: '2025-06-05T02:25:37-05:00'
+  recorded_at: '2025-06-05T03:33:44-05:00'
 - command_type: Open3::Capture3
   args:
   - ruby
@@ -20,11 +20,11 @@ commands:
   - "\"error"
   - message"'
   stdout: ''
-  stderr: |
-    fatal: not a git repository (or any of the parent directories): .git
-    error message
+  stderr: 'error message
+
+    '
   status: 0
-  recorded_at: '2025-06-05T02:25:38-05:00'
+  recorded_at: '2025-06-05T03:33:44-05:00'
 - command_type: Open3::Capture3
   args:
   - ruby
@@ -32,8 +32,6 @@ commands:
   - "'exit"
   - 42'
   stdout: ''
-  stderr: 'fatal: not a git repository (or any of the parent directories): .git
-
-    '
+  stderr: ''
   status: 42
-  recorded_at: '2025-06-05T02:25:38-05:00'
+  recorded_at: '2025-06-05T03:33:44-05:00'

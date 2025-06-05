@@ -1,5 +1,5 @@
 ---
-first_recorded_at: '2025-06-05T02:25:38-05:00'
+first_recorded_at: '2025-06-05T03:33:45-05:00'
 format_version: '2.0'
 commands:
 - command_type: Open3::Capture3
@@ -16,4 +16,4 @@ commands:
 
     '
   status: 1
-  recorded_at: '2025-06-05T02:25:38-05:00'
+  recorded_at: '2025-06-05T03:33:45-05:00'

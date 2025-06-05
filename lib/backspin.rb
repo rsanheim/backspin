@@ -43,6 +43,7 @@ module Backspin
 
     private
 
+    # Some default patterns for common credential types
     def default_credential_patterns
       [
         # AWS credentials
@@ -58,7 +59,9 @@ module Backspin
         # Generic patterns
         /api[_-]?key\s*[:=]\s*["']?([A-Za-z0-9\-_]{20,})["']?/i,  # Generic API keys
         /auth[_-]?token\s*[:=]\s*["']?([A-Za-z0-9\-_]{20,})["']?/i, # Auth tokens
+        /Bearer\s+([A-Za-z0-9\-_]+)/,                               # Bearer tokens
         /password\s*[:=]\s*["']?([^"'\s]{8,})["']?/i,             # Passwords
+        /-p([^"'\s]{8,})/,                                          # MySQL-style password args
         /secret\s*[:=]\s*["']?([A-Za-z0-9\-_]{20,})["']?/i       # Generic secrets
       ]
     end
