@@ -55,7 +55,7 @@ RSpec.describe "Backspin credential scrubbing" do
   describe "scrubbing Google credentials" do
     it "scrubs Google API keys" do
       result = Backspin.call("google_api_key") do
-        Open3.capture3("echo GOOGLE_API_KEY=AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe")
+        Open3.capture3("echo GOOGLE_API_KEY=AIzaFAKEGmWKa4JsXZ-HjGw7ISLn_3namBGFAKE")
       end
 
       record_data = YAML.load_file(result.record_path)
