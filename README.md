@@ -2,7 +2,7 @@
 
 Backspin records and replays CLI interactions in Ruby for easy snapshot testing of command-line interfaces. Currently supports `Open3.capture3` and `system` and requires `rspec-mocks`.  More system calls and flexible test integration are welcome - PRs welcome!
 
-**NOTE:** Backspin is in early development, and you can expect the API to change. It is being developed along-side in-production CLI apps, so the API will be refined and improved as we get to 1.0.
+**NOTE:** Backspin should be considered alpha quality software while pre v1.0. It is in heavy development, and you can expect the API to change. It is being developed in conjunction with production CLI apps, so the API will be refined and improved as we get to 1.0.
 
 Inspired by [VCR](https://github.com/vcr/vcr) and other [golden master](https://en.wikipedia.org/wiki/Golden_master_(software_development)) libraries.
 
