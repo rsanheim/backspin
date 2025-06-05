@@ -15,7 +15,7 @@ module Backspin
     def to_h(filter: nil)
       data = {
         "command_type" => @method_class.name,
-        "args" => @args,
+        "args" => scrub_args(@args),
         "stdout" => Backspin.scrub_text(@stdout),
         "stderr" => Backspin.scrub_text(@stderr),
         "status" => @status,
@@ -51,6 +51,24 @@ module Backspin
         status: data["status"],
         recorded_at: data["recorded_at"]
       )
+    end
+
+    private
+
+    def scrub_args(args)
+      return args unless Backspin.configuration.scrub_credentials && args
+
+      args.map do |arg|
+        if arg.is_a?(String)
+          Backspin.scrub_text(arg)
+        elsif arg.is_a?(Array)
+          scrub_args(arg)
+        elsif arg.is_a?(Hash)
+          arg.transform_values { |v| v.is_a?(String) ? Backspin.scrub_text(v) : v }
+        else
+          arg
+        end
+      end
     end
   end
 end

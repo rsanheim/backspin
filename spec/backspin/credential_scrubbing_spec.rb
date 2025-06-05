@@ -47,7 +47,6 @@ RSpec.describe "Backspin credential scrubbing" do
       end
 
       record_data = YAML.load_file(result.record_path)
-      # The entire match including key name gets scrubbed
       expect(record_data["commands"].first["stdout"]).to eq("#{"*" * 62}\n")
     end
   end
@@ -70,7 +69,6 @@ RSpec.describe "Backspin credential scrubbing" do
       end
 
       record_data = YAML.load_file(result.record_path)
-      # The entire match including key name gets scrubbed
       expect(record_data["commands"].first["stdout"]).to eq("#{"*" * 44}\n")
     end
 
@@ -80,7 +78,6 @@ RSpec.describe "Backspin credential scrubbing" do
       end
 
       record_data = YAML.load_file(result.record_path)
-      # The pattern matches "password: supersecretpassword123!"
       expect(record_data["commands"].first["stdout"]).to eq("database #{"*" * 33}\n")
     end
   end
@@ -93,7 +90,6 @@ RSpec.describe "Backspin credential scrubbing" do
 
       record_data = YAML.load_file(result.record_path)
       expect(record_data["commands"].first["stdout"]).to eq("normal output\n")
-      # The entire match including key name gets scrubbed
       expect(record_data["commands"].first["stderr"]).to eq("Error: Invalid #{"*" * 43}\n")
     end
   end
@@ -127,6 +123,107 @@ RSpec.describe "Backspin credential scrubbing" do
 
       record_data = YAML.load_file(result.record_path)
       expect(record_data["commands"].first["stdout"]).to match(/\*{27}/)
+    end
+  end
+
+  describe "scrubbing command arguments" do
+    it "scrubs AWS credentials in command arguments" do
+      result = Backspin.call("args_aws_creds") do
+        Open3.capture3("echo", "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE")
+      end
+
+      record_data = YAML.load_file(result.record_path)
+      args = record_data["commands"].first["args"]
+
+      args_string = args.join(" ")
+      expect(args_string).not_to include("AKIAIOSFODNN7EXAMPLE")
+      expect(args_string).to include("AWS_ACCESS_KEY_ID=")
+      expect(args_string).to match(/\*{20}/)
+    end
+
+    it "scrubs API keys in command arguments" do
+      result = Backspin.call("args_api_key") do
+        Open3.capture3("curl", "-H", "Authorization: Bearer sk-1234567890abcdef", "https://api.example.com")
+      end
+
+      record_data = YAML.load_file(result.record_path)
+      args = record_data["commands"].first["args"]
+
+      args_string = args.join(" ")
+      expect(args_string).not_to include("sk-1234567890abcdef")
+      expect(args_string).to include("Authorization:")
+      expect(args_string).to match(/\*+/)
+    end
+
+    it "scrubs passwords in command arguments" do
+      result = Backspin.call("args_password") do
+        Open3.capture3("mysql", "-u", "root", "-psupersecretpassword123", "mydb")
+      end
+
+      record_data = YAML.load_file(result.record_path)
+      args = record_data["commands"].first["args"]
+
+      args_string = args.join(" ")
+      expect(args_string).not_to include("supersecretpassword123")
+      expect(args_string).to match(/mysql -u root \*+ mydb/)
+    end
+
+    it "handles nested array arguments" do
+      result = Backspin.call("args_nested") do
+        Open3.capture3("sh", "-c", "export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY && echo done")
+      end
+
+      record_data = YAML.load_file(result.record_path)
+      args = record_data["commands"].first["args"]
+
+      args_string = args.join(" ")
+      expect(args_string).not_to include("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
+      expect(args_string).to match(/sh -c export \*+ && echo done/)
+    end
+
+    it "does not scrub arguments when scrubbing is disabled" do
+      Backspin.configure do |config|
+        config.scrub_credentials = false
+      end
+
+      result = Backspin.call("args_no_scrub") do
+        Open3.capture3("echo", "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE")
+      end
+
+      record_data = YAML.load_file(result.record_path)
+      args = record_data["commands"].first["args"]
+
+      args_string = args.join(" ")
+      expect(args_string).to include("AKIAIOSFODNN7EXAMPLE")
+      expect(args_string).to eq("echo AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE")
+
+      Backspin.reset_configuration!
+    end
+
+    it "scrubs credentials from multiple commands" do
+      result = Backspin.call("multiple_commands_with_creds") do
+        Open3.capture3("echo", "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE")
+        Open3.capture3("curl", "-H", "Authorization: Bearer sk-secret123456789", "https://api.example.com")
+        Open3.capture3("mysql", "-u", "admin", "-pmysupersecretpassword", "production_db")
+      end
+
+      record_data = YAML.load_file(result.record_path)
+      commands = record_data["commands"]
+
+      expect(commands.length).to eq(3)
+
+      first_args = commands[0]["args"].join(" ")
+      expect(first_args).not_to include("AKIAIOSFODNN7EXAMPLE")
+      expect(first_args).to include("AWS_ACCESS_KEY_ID=")
+
+      second_args = commands[1]["args"].join(" ")
+      expect(second_args).not_to include("sk-secret123456789")
+      expect(second_args).to include("Authorization:")
+
+      third_args = commands[2]["args"].join(" ")
+      expect(third_args).not_to include("mysupersecretpassword")
+      expect(third_args).to include("mysql")
+      expect(third_args).to include("admin")
     end
   end
 end
