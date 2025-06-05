@@ -7,9 +7,10 @@ require "rspec/mocks"
 require "backspin/version"
 require "backspin/command_result"
 require "backspin/command"
+require "backspin/command_diff"
 require "backspin/record"
 require "backspin/recorder"
-require "backspin/unified_result"
+require "backspin/record_result"
 require "backspin/unified_api"
 
 module Backspin

@@ -63,8 +63,7 @@ RSpec.describe "Backspin.run unified API" do
         end
 
         expect(result).not_to be_verified
-        expect(result.expected_output).to eq("original\n")
-        expect(result.actual_output).to eq("different\n")
+        expect(result.diff).to include("Command 1:")
         expect(result.diff).to include("-original")
         expect(result.diff).to include("+different")
       end
@@ -226,10 +225,11 @@ RSpec.describe "Backspin.run unified API" do
         end
       end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
         expect(error.message).to include("Backspin verification failed!")
-        expect(error.message).to include("Expected output:")
-        expect(error.message).to include("original")
-        expect(error.message).to include("Actual output:")
-        expect(error.message).to include("different")
+        expect(error.message).to include("Output verification failed")
+        expect(error.message).to include("Command 1:")
+        expect(error.message).to include("stdout differs")
+        expect(error.message).to include("-original")
+        expect(error.message).to include("+different")
       end
     end
 
@@ -243,7 +243,7 @@ RSpec.describe "Backspin.run unified API" do
     end
   end
 
-  describe "UnifiedResult" do
+  describe "RecordResult" do
     it "provides helpful methods" do
       result = Backspin.run("result_methods") do
         Open3.capture3("sh -c 'echo stdout; echo stderr >&2; exit 0'")
@@ -260,7 +260,7 @@ RSpec.describe "Backspin.run unified API" do
       # Verify that verified is nil but not included in the hash
       expect(result.verified?).to be_nil
 
-      expect(result.inspect).to match(/UnifiedResult mode=record/)
+      expect(result.inspect).to match(/RecordResult mode=record/)
     end
   end
 

@@ -199,11 +199,13 @@ RSpec.describe "Backspin.run with multiple commands" do
           Open3.capture3("echo THREE")
         end
       end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
-        expect(error.message).to include("3 commands recorded")
-        expect(error.message).to include("Command 2 failed:")
-        expect(error.message).to include('Expected: "two')
-        expect(error.message).to include('Actual: "TWO')
-        expect(error.message).to include("Command 3 failed:")
+        expect(error.message).to include("Output verification failed for 2 command(s)")
+        expect(error.message).to include("Command 2: ✗ Command failed: stdout differs")
+        expect(error.message).to include("-two")
+        expect(error.message).to include("+TWO")
+        expect(error.message).to include("Command 3: ✗ Command failed: stdout differs")
+        expect(error.message).to include("-three")
+        expect(error.message).to include("+THREE")
       end
     end
   end

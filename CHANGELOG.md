@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+WIP: New unified API with `run` and `run!` methods that automatically record on first use and verify on subsequent runs
+
 ## [0.3.0] - 2025-06-05
 - Scrub credentials from command arguments
 

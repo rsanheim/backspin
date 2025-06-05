@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
-require_relative "unified_result"
+require_relative "record_result"
 require_relative "command_result"
+require_relative "command_diff"
 
 module Backspin
   class << self
@@ -12,7 +13,7 @@ module Backspin
     # @option options [Symbol] :mode (:auto) Recording mode - :auto, :record, :verify, :playback
     # @option options [Proc] :filter Custom filter for recorded data
     # @option options [Proc] :matcher Custom matcher for verification
-    # @return [UnifiedResult] Result object with output and status
+    # @return [RecordResult] Result object with output and status
     def run(record_name, options = {}, &block)
       raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
       raise ArgumentError, "block is required" unless block_given?
@@ -36,7 +37,7 @@ module Backspin
     #
     # @param record_name [String] Name for the record file
     # @param options [Hash] Options for recording/verification
-    # @return [UnifiedResult] Result object with output and status
+    # @return [RecordResult] Result object with output and status
     # @raise [RSpec::Expectations::ExpectationNotMetError] If verification fails
     def run!(record_name, options = {}, &block)
       result = run(record_name, options, &block)
@@ -45,23 +46,8 @@ module Backspin
         error_message = "Backspin verification failed!\n"
         error_message += "Record: #{result.record_path}\n"
 
-        if result.multiple_commands?
-          error_message += "#{result.commands.size} commands recorded\n"
-
-          # Show details for each failed command
-          result.verified_commands&.each_with_index do |vc, idx|
-            next if vc[:verified]
-
-            error_message += "\nCommand #{idx + 1} failed:\n"
-            error_message += "Expected: #{vc[:command].stdout.inspect}\n"
-            error_message += "Actual: #{vc[:actual].stdout.inspect}\n"
-          end
-        elsif result.expected_output && result.actual_output
-          error_message += "Expected output:\n#{result.expected_output}\n"
-          error_message += "Actual output:\n#{result.actual_output}\n"
-        end
-
-        error_message += "\nDiff:\n#{result.diff}\n" if result.diff && !result.diff.empty?
+        # Use the error_message from the result which is now properly formatted
+        error_message += "\n#{result.error_message}" if result.error_message
 
         raise RSpec::Expectations::ExpectationNotMetError, error_message
       end
@@ -100,7 +86,7 @@ module Backspin
       record.save(filter: options[:filter])
 
       # Return result
-      UnifiedResult.new(
+      RecordResult.new(
         output: output,
         mode: :record,
         record_path: Pathname.new(record_path),
@@ -119,7 +105,7 @@ module Backspin
       recorder.setup_replay_stubs
 
       # Track verification results for each command
-      verified_commands = []
+      command_diffs = []
       command_index = 0
 
       # Override stubs to verify each command as it's executed
@@ -144,18 +130,12 @@ module Backspin
           status: status.exitstatus
         )
 
-        # Check if it matches
-        command_verified = if options[:matcher]
-          options[:matcher].call(recorded_command.to_h, actual_result.to_h)
-        else
-          recorded_command.result == actual_result
-        end
-
-        verified_commands << {
-          command: recorded_command,
-          actual: actual_result,
-          verified: command_verified
-        }
+        # Create CommandDiff to track the comparison
+        command_diffs << CommandDiff.new(
+          recorded_command: recorded_command,
+          actual_result: actual_result,
+          matcher: options[:matcher]
+        )
 
         command_index += 1
         [stdout, stderr, status]
@@ -182,14 +162,12 @@ module Backspin
           status: result ? 0 : 1
         )
 
-        # For system calls, we only verify the exit status
-        command_verified = recorded_command.result.status == actual_result.status
-
-        verified_commands << {
-          command: recorded_command,
-          actual: actual_result,
-          verified: command_verified
-        }
+        # Create CommandDiff to track the comparison
+        command_diffs << CommandDiff.new(
+          recorded_command: recorded_command,
+          actual_result: actual_result,
+          matcher: options[:matcher]
+        )
 
         command_index += 1
         result
@@ -204,32 +182,15 @@ module Backspin
       end
 
       # Overall verification status
-      all_verified = verified_commands.all? { |vc| vc[:verified] }
+      all_verified = command_diffs.all?(&:verified?)
 
-      # Build diff for failed commands
-      diff = nil
-      if !all_verified && !options[:matcher]
-        diff_parts = []
-        verified_commands.each_with_index do |vc, idx|
-          next if vc[:verified]
-
-          diff_parts << "Command #{idx + 1}:"
-          diff_parts << generate_simple_diff(vc[:command].stdout, vc[:actual].stdout)
-        end
-        diff = diff_parts.join("\n\n")
-      end
-
-      UnifiedResult.new(
+      RecordResult.new(
         output: output,
         mode: :verify,
         verified: all_verified,
         record_path: Pathname.new(record_path),
         commands: record.commands,
-        verified_commands: verified_commands,
-        diff: diff,
-        # Keep backwards compatibility for single command
-        expected_output: record.commands.first&.stdout,
-        actual_output: verified_commands.first&.[](:actual)&.stdout
+        command_diffs: command_diffs
       )
     end
 
@@ -246,7 +207,7 @@ module Backspin
       # Execute block (all commands will be stubbed with recorded values)
       output = yield
 
-      UnifiedResult.new(
+      RecordResult.new(
         output: output,
         mode: :playback,
         verified: true, # Always true for playback
@@ -255,26 +216,5 @@ module Backspin
       )
     end
 
-    def generate_simple_diff(expected, actual)
-      return nil if expected == actual
-
-      diff_lines = []
-      expected_lines = (expected || "").lines
-      actual_lines = (actual || "").lines
-
-      max_lines = [expected_lines.length, actual_lines.length].max
-
-      max_lines.times do |i|
-        expected_line = expected_lines[i]
-        actual_line = actual_lines[i]
-
-        if expected_line != actual_line
-          diff_lines << "-#{expected_line.chomp}" if expected_line
-          diff_lines << "+#{actual_line.chomp}" if actual_line
-        end
-      end
-
-      diff_lines.join("\n")
-    end
   end
 end

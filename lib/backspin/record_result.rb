@@ -1,30 +1,18 @@
 # frozen_string_literal: true
 
 module Backspin
-  # Unified result object for all Backspin operations
+  # Result object for all Backspin record operations
   # Provides a consistent interface whether recording, verifying, or playing back
-  class UnifiedResult
-    attr_reader :output, :record_path, :commands, :mode, :expected_output, :actual_output, :expected_stderr,
-      :actual_stderr, :expected_status, :actual_status, :diff, :verified_commands
+  class RecordResult
+    attr_reader :output, :record_path, :commands, :mode, :command_diffs
 
-    def initialize(output:, mode:, record_path:, commands:, verified: nil,
-      expected_output: nil, actual_output: nil,
-      expected_stderr: nil, actual_stderr: nil,
-      expected_status: nil, actual_status: nil,
-      diff: nil, verified_commands: nil)
+    def initialize(output:, mode:, record_path:, commands:, verified: nil, command_diffs: nil)
       @output = output
       @mode = mode
       @record_path = record_path
       @commands = commands
       @verified = verified
-      @expected_output = expected_output
-      @actual_output = actual_output
-      @expected_stderr = expected_stderr
-      @actual_stderr = actual_stderr
-      @expected_status = expected_status
-      @actual_status = actual_status
-      @diff = diff
-      @verified_commands = verified_commands
+      @command_diffs = command_diffs || []
     end
 
     # @return [Boolean] true if this result is from recording
@@ -45,12 +33,37 @@ module Backspin
     # @return [String, nil] Human-readable error message if verification failed
     def error_message
       return nil unless verified? == false
+      return "No commands to verify" if command_diffs.empty?
 
-      msg = "Output verification failed"
-      msg += "\nExpected: #{expected_output.inspect}" if expected_output
-      msg += "\nActual: #{actual_output.inspect}" if actual_output
-      msg += "\n#{diff}" if diff
+      failed_diffs = command_diffs.reject(&:verified?)
+      return "All commands verified" if failed_diffs.empty?
+
+      msg = "Output verification failed for #{failed_diffs.size} command(s):\n\n"
+
+      command_diffs.each_with_index do |diff, idx|
+        next if diff.verified?
+
+        msg += "Command #{idx + 1}: #{diff.summary}\n"
+        msg += diff.diff
+        msg += "\n\n" if idx < command_diffs.size - 1
+      end
+
       msg
+    end
+
+    # @return [String, nil] Combined diff from all failed commands
+    def diff
+      return nil if command_diffs.empty?
+
+      failed_diffs = command_diffs.reject(&:verified?)
+      return nil if failed_diffs.empty?
+
+      diff_parts = []
+      command_diffs.each_with_index do |cmd_diff, idx|
+        diff_parts << "Command #{idx + 1}:\n#{cmd_diff.diff}" unless cmd_diff.verified?
+      end
+
+      diff_parts.join("\n\n")
     end
 
     # Convenience accessors for command output
@@ -59,26 +72,17 @@ module Backspin
 
     # @return [String, nil] stdout from the first command
     def stdout
-      return commands.first.result.stdout if commands.any?
-      return actual_output if actual_output # backwards compatibility
-
-      nil
+      commands.first&.result&.stdout
     end
 
     # @return [String, nil] stderr from the first command
     def stderr
-      return commands.first.result.stderr if commands.any?
-      return actual_stderr if actual_stderr # backwards compatibility
-
-      nil
+      commands.first&.result&.stderr
     end
 
     # @return [Integer, nil] exit status from the first command
     def status
-      return commands.first.result.status if commands.any?
-      return actual_status if actual_status # backwards compatibility
-
-      nil
+      commands.first&.result&.status
     end
 
     # Multiple command accessors
@@ -136,11 +140,14 @@ module Backspin
       # Only include diff if present
       hash[:diff] = diff if diff
 
+      # Include number of failed commands if in verify mode
+      hash[:failed_commands] = command_diffs.count { |d| !d.verified? } if mode == :verify && command_diffs.any?
+
       hash
     end
 
     def inspect
-      "#<Backspin::UnifiedResult mode=#{mode} verified=#{verified?.inspect} status=#{status}>"
+      "#<Backspin::RecordResult mode=#{mode} verified=#{verified?.inspect} status=#{status}>"
     end
   end
 end
