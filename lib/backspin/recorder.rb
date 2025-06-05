@@ -142,9 +142,6 @@ module Backspin
         )
         @commands << command
 
-        # Store output for later access (last one wins)
-        Backspin.last_output = stdout
-
         # Return original result
         [stdout, stderr, status]
       end
@@ -181,9 +178,6 @@ module Backspin
           recorded_at: Time.now.iso8601
         )
         @commands << command
-
-        # Store output for later access (for consistency with capture3)
-        Backspin.last_output = stdout
 
         # Return the original result (true/false/nil)
         result

@@ -11,7 +11,6 @@ require "backspin/command_diff"
 require "backspin/record"
 require "backspin/recorder"
 require "backspin/record_result"
-require "backspin/unified_api"
 
 module Backspin
   class RecordNotFoundError < StandardError; end
@@ -85,85 +84,7 @@ module Backspin
     end
   end
 
-  class Result
-    attr_reader :commands, :record_path
-
-    def initialize(commands:, record_path:)
-      @commands = commands
-      @record_path = record_path
-    end
-  end
-
-  class VerifyResult
-    attr_reader :record_path, :expected_output, :actual_output, :diff, :stderr_diff
-
-    def initialize(verified:, record_path:, expected_output: nil, actual_output: nil,
-      expected_stderr: nil, actual_stderr: nil, expected_status: nil, actual_status: nil,
-      command_executed: true)
-      @verified = verified
-      @record_path = record_path
-      @expected_output = expected_output
-      @actual_output = actual_output
-      @expected_stderr = expected_stderr
-      @actual_stderr = actual_stderr
-      @expected_status = expected_status
-      @actual_status = actual_status
-      @command_executed = command_executed
-
-      if !verified && expected_output && actual_output
-        @diff = generate_diff(expected_output, actual_output)
-      end
-
-      if !verified && expected_stderr && actual_stderr && expected_stderr != actual_stderr
-        @stderr_diff = generate_diff(expected_stderr, actual_stderr)
-      end
-    end
-
-    def verified?
-      @verified
-    end
-
-    def output
-      @actual_output
-    end
-
-    def error_message
-      return nil if verified?
-
-      "Output verification failed\nExpected: #{@expected_output.chomp}\nActual: #{@actual_output.chomp}"
-    end
-
-    def command_executed?
-      @command_executed
-    end
-
-    private
-
-    def generate_diff(expected, actual)
-      expected_lines = expected.lines
-      actual_lines = actual.lines
-      diff = []
-
-      # Simple diff for now
-      expected_lines.each do |line|
-        unless actual_lines.include?(line)
-          diff << "-#{line.chomp}"
-        end
-      end
-
-      actual_lines.each do |line|
-        unless expected_lines.include?(line)
-          diff << "+#{line.chomp}"
-        end
-      end
-
-      diff.join("\n")
-    end
-  end
-
   class << self
-    attr_accessor :last_output
-
     def scrub_text(text)
       return text unless configuration.scrub_credentials && text
 
@@ -177,169 +98,49 @@ module Backspin
       scrubbed
     end
 
-    def call(record_name, filter: nil)
+    # Primary API - records on first run, verifies on subsequent runs
+    #
+    # @param record_name [String] Name for the record file
+    # @param options [Hash] Options for recording/verification
+    # @option options [Symbol] :mode (:auto) Recording mode - :auto, :record, :verify, :playback
+    # @option options [Proc] :filter Custom filter for recorded data
+    # @option options [Proc] :matcher Custom matcher for verification
+    # @return [RecordResult] Result object with output and status
+    def run(record_name, options = {}, &block)
       raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
+      raise ArgumentError, "block is required" unless block_given?
 
       record_path = build_record_path(record_name)
+      mode = determine_mode(options[:mode], record_path)
 
-      # Create recorder to handle stubbing and command recording
-      recorder = Recorder.new
-      recorder.record_calls(:capture3, :system)
-
-      yield
-
-      # Save commands using new format
-      FileUtils.mkdir_p(File.dirname(record_path))
-      # Don't load existing data when creating new record
-      record = Record.new(record_path)
-      record.clear  # Clear any loaded data
-      recorder.commands.each { |cmd| record.add_command(cmd) }
-      record.save(filter: filter)
-
-      Result.new(commands: recorder.commands, record_path: Pathname.new(record_path))
-    end
-
-    def output
-      last_output
-    end
-
-    def use_record(record_name, options = {}, &block)
-      raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
-
-      record_path = build_record_path(record_name)
-      record_mode = options[:record] || :once
-      filter = options[:filter]
-
-      case record_mode
-      when :none
-        # Never record, only replay
-        unless File.exist?(record_path)
-          raise RecordNotFoundError, "Record not found: #{record_path}"
-        end
-        replay_record(record_path, &block)
-      when :all
-        # Always record
-        record_and_save_record(record_path, filter: filter, &block)
-      when :once
-        # Record if doesn't exist, replay if exists
-        if File.exist?(record_path)
-          replay_record(record_path, &block)
-        else
-          record_and_save_record(record_path, filter: filter, &block)
-        end
-      when :new_episodes
-        # Record new commands not in record
-        # For now, simplified: just append new recordings
-        record_new_episode(record_path, filter: filter, &block)
+      case mode
+      when :record
+        perform_recording(record_name, record_path, options, &block)
+      when :verify
+        perform_verification(record_name, record_path, options, &block)
+      when :playback
+        perform_playback(record_name, record_path, options, &block)
       else
-        raise ArgumentError, "Unknown record mode: #{record_mode}"
+        raise ArgumentError, "Unknown mode: #{mode}"
       end
     end
 
-    def verify(record_name, mode: :strict, matcher: nil, &block)
-      record_path = build_record_path(record_name)
+    # Strict version of run that raises on verification failure
+    #
+    # @param record_name [String] Name for the record file
+    # @param options [Hash] Options for recording/verification
+    # @return [RecordResult] Result object with output and status
+    # @raise [RSpec::Expectations::ExpectationNotMetError] If verification fails
+    def run!(record_name, options = {}, &block)
+      result = run(record_name, options, &block)
 
-      record = Record.load_or_create(record_path)
-      unless record.exists?
-        raise RecordNotFoundError, "Record not found: #{record_path}"
-      end
-
-      if record.empty?
-        raise RecordNotFoundError, "No commands found in record"
-      end
-
-      # For verify, we only handle single command verification for now
-      # Use the first command
-      command = record.commands.first
-
-      # Create recorder for verification
-      recorder = Recorder.new
-
-      if mode == :playback
-        # Playback mode: return recorded output without running command
-        recorder.setup_playback_stub(command)
-
-        yield
-
-        # In playback mode, always verified
-        VerifyResult.new(
-          verified: true,
-          record_path: Pathname.new(record_path),
-          expected_output: command.stdout,
-          actual_output: command.stdout,
-          expected_stderr: command.stderr,
-          actual_stderr: command.stderr,
-          expected_status: command.status,
-          actual_status: command.status,
-          command_executed: false
-        )
-      elsif matcher
-        # Custom matcher verification
-        recorder.setup_verification_stub(command)
-
-        yield
-
-        # Call custom matcher - convert command back to hash format for matcher
-        recorded_data = command.to_h
-        verified = matcher.call(recorded_data, recorder.verification_data)
-
-        VerifyResult.new(
-          verified: verified,
-          record_path: Pathname.new(record_path),
-          expected_output: command.stdout,
-          actual_output: recorder.verification_data["stdout"],
-          expected_stderr: command.stderr,
-          actual_stderr: recorder.verification_data["stderr"],
-          expected_status: command.status,
-          actual_status: recorder.verification_data["status"]
-        )
-      else
-        # Default strict mode
-        recorder.setup_verification_stub(command)
-
-        yield
-
-        # Compare outputs
-        actual_stdout = recorder.verification_data["stdout"]
-        actual_stderr = recorder.verification_data["stderr"]
-        actual_status = recorder.verification_data["status"]
-
-        verified =
-          command.stdout == actual_stdout &&
-          command.stderr == actual_stderr &&
-          command.status == actual_status
-
-        VerifyResult.new(
-          verified: verified,
-          record_path: Pathname.new(record_path),
-          expected_output: command.stdout,
-          actual_output: actual_stdout,
-          expected_stderr: command.stderr,
-          actual_stderr: actual_stderr,
-          expected_status: command.status,
-          actual_status: actual_status
-        )
-      end
-    end
-
-    def verify!(record_name, mode: :strict, matcher: nil, &block)
-      result = verify(record_name, mode: mode, matcher: matcher, &block)
-
-      unless result.verified?
+      if result.verified? == false
         error_message = "Backspin verification failed!\n"
         error_message += "Record: #{result.record_path}\n"
-        error_message += "Expected output:\n#{result.expected_output}\n"
-        error_message += "Actual output:\n#{result.actual_output}\n"
 
-        if result.diff && !result.diff.empty?
-          error_message += "Diff:\n#{result.diff}\n"
-        end
+        # Use the error_message from the result which is now properly formatted
+        error_message += "\n#{result.error_message}" if result.error_message
 
-        if result.stderr_diff && !result.stderr_diff.empty?
-          error_message += "Stderr diff:\n#{result.stderr_diff}\n"
-        end
-
-        # Raise RSpec's expectation failure for proper integration
         raise RSpec::Expectations::ExpectationNotMetError, error_message
       end
 
@@ -347,6 +148,165 @@ module Backspin
     end
 
     private
+
+    def determine_mode(mode_option, record_path)
+      return mode_option if mode_option && mode_option != :auto
+
+      # Auto mode: record if file doesn't exist, verify if it does
+      File.exist?(record_path) ? :verify : :record
+    end
+
+    def perform_recording(_record_name, record_path, options)
+      recorder = Recorder.new
+      recorder.record_calls(:capture3, :system)
+
+      # Execute the block and capture output
+      output = yield
+
+      # Normalize status if it's a capture3 result
+      if output.is_a?(Array) && output.size == 3
+        stdout, stderr, status = output
+        status_int = status.respond_to?(:exitstatus) ? status.exitstatus : status
+        output = [stdout, stderr, status_int]
+      end
+
+      # Save the recording
+      FileUtils.mkdir_p(File.dirname(record_path))
+      record = Record.new(record_path)
+      record.clear
+      recorder.commands.each { |cmd| record.add_command(cmd) }
+      record.save(filter: options[:filter])
+
+      # Return result
+      RecordResult.new(
+        output: output,
+        mode: :record,
+        record_path: Pathname.new(record_path),
+        commands: recorder.commands
+      )
+    end
+
+    def perform_verification(_record_name, record_path, options)
+      record = Record.load_or_create(record_path)
+
+      raise RecordNotFoundError, "Record not found: #{record_path}" unless record.exists?
+      raise RecordNotFoundError, "No commands found in record" if record.empty?
+
+      # For verification, we need to track all commands executed
+      recorder = Recorder.new(mode: :verify, record: record)
+      recorder.setup_replay_stubs
+
+      # Track verification results for each command
+      command_diffs = []
+      command_index = 0
+
+      # Override stubs to verify each command as it's executed
+      allow(Open3).to receive(:capture3).and_wrap_original do |original_method, *args|
+        recorded_command = record.commands[command_index]
+
+        if recorded_command.nil?
+          raise RecordNotFoundError, "No more recorded commands, but tried to execute: #{args.inspect}"
+        end
+
+        if recorded_command.method_class != Open3::Capture3
+          raise RecordNotFoundError, "Expected #{recorded_command.method_class.name} but got Open3.capture3"
+        end
+
+        # Execute the actual command
+        stdout, stderr, status = original_method.call(*args)
+
+        # Create verification result
+        actual_result = CommandResult.new(
+          stdout: stdout,
+          stderr: stderr,
+          status: status.exitstatus
+        )
+
+        # Create CommandDiff to track the comparison
+        command_diffs << CommandDiff.new(
+          recorded_command: recorded_command,
+          actual_result: actual_result,
+          matcher: options[:matcher]
+        )
+
+        command_index += 1
+        [stdout, stderr, status]
+      end
+
+      allow_any_instance_of(Object).to receive(:system).and_wrap_original do |original_method, receiver, *args|
+        recorded_command = record.commands[command_index]
+
+        if recorded_command.nil?
+          raise RecordNotFoundError, "No more recorded commands, but tried to execute: system #{args.inspect}"
+        end
+
+        if recorded_command.method_class != ::Kernel::System
+          raise RecordNotFoundError, "Expected #{recorded_command.method_class.name} but got system"
+        end
+
+        # Execute the actual command
+        result = original_method.call(receiver, *args)
+
+        # Create verification result (system only gives us exit status)
+        actual_result = CommandResult.new(
+          stdout: "",
+          stderr: "",
+          status: result ? 0 : 1
+        )
+
+        # Create CommandDiff to track the comparison
+        command_diffs << CommandDiff.new(
+          recorded_command: recorded_command,
+          actual_result: actual_result,
+          matcher: options[:matcher]
+        )
+
+        command_index += 1
+        result
+      end
+
+      # Execute block
+      output = yield
+
+      # Check if all commands were executed
+      if command_index < record.commands.size
+        raise RecordNotFoundError, "Expected #{record.commands.size} commands but only #{command_index} were executed"
+      end
+
+      # Overall verification status
+      all_verified = command_diffs.all?(&:verified?)
+
+      RecordResult.new(
+        output: output,
+        mode: :verify,
+        verified: all_verified,
+        record_path: Pathname.new(record_path),
+        commands: record.commands,
+        command_diffs: command_diffs
+      )
+    end
+
+    def perform_playback(_record_name, record_path, _options)
+      record = Record.load_or_create(record_path)
+
+      raise RecordNotFoundError, "Record not found: #{record_path}" unless record.exists?
+      raise RecordNotFoundError, "No commands found in record" if record.empty?
+
+      # Setup replay mode - this will handle returning values for all commands
+      recorder = Recorder.new(mode: :replay, record: record)
+      recorder.setup_replay_stubs
+
+      # Execute block (all commands will be stubbed with recorded values)
+      output = yield
+
+      RecordResult.new(
+        output: output,
+        mode: :playback,
+        verified: true, # Always true for playback
+        record_path: Pathname.new(record_path),
+        commands: record.commands
+      )
+    end
 
     def replay_record(record_path, &block)
       record = Record.load_or_create(record_path)
