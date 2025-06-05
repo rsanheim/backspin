@@ -1,0 +1,18 @@
+---
+first_recorded_at: '2025-06-05T02:25:38-05:00'
+format_version: '2.0'
+commands:
+- command_type: Kernel::System
+  args:
+  - 'true'
+  stdout: ''
+  stderr: ''
+  status: 0
+  recorded_at: '2025-06-05T02:25:38-05:00'
+- command_type: Kernel::System
+  args:
+  - 'false'
+  stdout: ''
+  stderr: ''
+  status: 1
+  recorded_at: '2025-06-05T02:25:38-05:00'

@@ -1,0 +1,87 @@
+module Backspin
+  class RecordFormatError < StandardError; end
+
+  class NoMoreRecordingsError < StandardError; end
+
+  class Record
+    attr_reader :path, :commands, :first_recorded_at
+
+    def initialize(path)
+      @path = path
+      @commands = []
+      @first_recorded_at = nil
+      @playback_index = 0
+      load_from_file if File.exist?(@path)
+    end
+
+    def add_command(command)
+      @commands << command
+      @first_recorded_at ||= command.recorded_at
+      self
+    end
+
+    def save(filter: nil)
+      FileUtils.mkdir_p(File.dirname(@path))
+      # New format: top-level metadata with commands array
+      record_data = {
+        "first_recorded_at" => @first_recorded_at,
+        "format_version" => "2.0",
+        "commands" => @commands.map { |cmd| cmd.to_h(filter: filter) }
+      }
+      File.write(@path, record_data.to_yaml)
+    end
+
+    def reload
+      @commands = []
+      @playback_index = 0
+      load_from_file if File.exist?(@path)
+      @playback_index = 0  # Reset again after loading to ensure it's at 0
+    end
+
+    def exists?
+      File.exist?(@path)
+    end
+
+    def empty?
+      @commands.empty?
+    end
+
+    def size
+      @commands.size
+    end
+
+    def next_command
+      if @playback_index >= @commands.size
+        raise NoMoreRecordingsError, "No more recordings available for replay"
+      end
+
+      command = @commands[@playback_index]
+      @playback_index += 1
+      command
+    end
+
+    def clear
+      @commands = []
+      @playback_index = 0
+    end
+
+    def self.load_or_create(path)
+      new(path)
+    end
+
+    private
+
+    def load_from_file
+      data = YAML.load_file(@path.to_s)
+
+      unless data.is_a?(Hash) && data["format_version"] == "2.0"
+        raise RecordFormatError, "Invalid record format: expected format version 2.0"
+      end
+
+      @first_recorded_at = data["first_recorded_at"]
+      @commands = data["commands"].map { |command_data| Command.from_h(command_data) }
+    rescue Psych::SyntaxError => e
+      raise RecordFormatError, "Invalid record format: #{e.message}"
+    end
+  end
+end

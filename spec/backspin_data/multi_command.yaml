@@ -1,0 +1,34 @@
+---
+first_recorded_at: '2025-06-05T02:25:38-05:00'
+format_version: '2.0'
+commands:
+- command_type: Open3::Capture3
+  args:
+  - echo
+  - first
+  stdout: 'first
+
+    '
+  stderr: ''
+  status: 0
+  recorded_at: '2025-06-05T02:25:38-05:00'
+- command_type: Open3::Capture3
+  args:
+  - echo
+  - second
+  stdout: 'second
+
+    '
+  stderr: ''
+  status: 0
+  recorded_at: '2025-06-05T02:25:38-05:00'
+- command_type: Open3::Capture3
+  args:
+  - echo
+  - third
+  stdout: 'third
+
+    '
+  stderr: ''
+  status: 0
+  recorded_at: '2025-06-05T02:25:38-05:00'

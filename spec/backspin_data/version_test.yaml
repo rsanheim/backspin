@@ -1,0 +1,14 @@
+---
+first_recorded_at: '2025-06-05T02:25:38-05:00'
+format_version: '2.0'
+commands:
+- command_type: Open3::Capture3
+  args:
+  - ruby
+  - "--version"
+  stdout: 'ruby 3.4.4 (2025-05-14 revision a38531fd3f) +PRISM [arm64-darwin24]
+
+    '
+  stderr: ''
+  status: 0
+  recorded_at: '2025-06-05T02:25:38-05:00'

@@ -1,0 +1,19 @@
+/.bundle/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+/.claude
+/.cursor
+
+# rspec failure tracking
+.rspec_status
+
+# Backspin cassettes
+/tmp/backspin/
+
+# Bundler
+Gemfile.lock

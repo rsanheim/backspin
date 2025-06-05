@@ -1,0 +1,7 @@
+# StandardRB configuration for Backspin
+parallel: true
+format: progress
+
+ignore:
+  - 'tmp/**/*'
+  - 'vendor/**/*'
