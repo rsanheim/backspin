@@ -1,16 +1,12 @@
 ---
-first_recorded_at: '2025-06-06T00:33:55-05:00'
+first_recorded_at: '2025-05-01T12:00:00Z'
 format_version: '2.0'
 commands:
 - command_type: Open3::Capture3
   args:
   - echo
-  - "'Test"
-  - run
-  - at
-  - '2024-01-15'
-  - 10:30:45'
-  stdout: 'Test run at TIMESTAMP
+  - "'original'"
+  stdout: 'original
 
     '
   stderr: ''
