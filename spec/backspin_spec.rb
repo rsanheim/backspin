@@ -7,7 +7,7 @@ RSpec.describe Backspin do
     it "records stdout, stderr, and status to a single yaml" do
       time = Time.now
       Timecop.freeze(time)
-      result = Backspin.call("echo_hello") do
+      result = Backspin.run("echo_hello", mode: :record) do
         Open3.capture3("echo hello")
       end
       expect(result.commands.size).to eq(1)
@@ -30,20 +30,20 @@ RSpec.describe Backspin do
         "recorded_at" => time.iso8601
       })
 
-      expect(Backspin.output).to eq("hello\n")
+      # last_output is removed in new API
     end
 
     it "raises ArgumentError when no record name is provided" do
       expect {
-        Backspin.call do
+        Backspin.run do
           Open3.capture3("echo hello")
         end
-      }.to raise_error(ArgumentError, "wrong number of arguments (given 0, expected 1)")
+      }.to raise_error(ArgumentError, /wrong number of arguments/)
     end
 
     it "raises ArgumentError when record name is nil" do
       expect {
-        Backspin.call(nil) do
+        Backspin.run(nil, mode: :record) do
           Open3.capture3("echo hello")
         end
       }.to raise_error(ArgumentError, "record_name is required")
@@ -51,7 +51,7 @@ RSpec.describe Backspin do
 
     it "raises ArgumentError when record name is empty" do
       expect {
-        Backspin.call("") do
+        Backspin.run("", mode: :record) do
           Open3.capture3("echo hello")
         end
       }.to raise_error(ArgumentError, "record_name is required")
@@ -61,7 +61,7 @@ RSpec.describe Backspin do
       time = Time.now
       Timecop.freeze(time)
 
-      result = Backspin.call("multi_command") do
+      result = Backspin.run("multi_command", mode: :record) do
         Open3.capture3("echo first")
         Open3.capture3("echo second")
         Open3.capture3("echo third")
@@ -108,8 +108,7 @@ RSpec.describe Backspin do
         "recorded_at" => time.iso8601
       })
 
-      # last_output should be the last command
-      expect(Backspin.output).to eq("third\n")
+      # last_output is removed in new API
     end
   end
 end
