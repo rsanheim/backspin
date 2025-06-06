@@ -62,7 +62,7 @@ bin/rake standard               # Run Standard Ruby linter
 ### Testing Approach
 
 - Integration-focused tests that exercise the full stack
-- Default record directory is `spec/backspin_data` (can be configured)
+- Default record directory is `fixtures/backspin` (can be configured)
 - Tests use real shell commands (`echo`, `date`, etc.)
 - Configuration is reset between tests to avoid side effects
 - **Important**: Backspin specs MUST be as local and un-DRY as possible. Each spec should be self-contained with its own setup, expectations, and cleanup if needed. Avoid shared contexts or helpers that hide important test details.
@@ -76,7 +76,7 @@ bin/rake standard               # Run Standard Ruby linter
 4. Run tests with `rake spec`
 
 ### Debugging Tests
-- Records are saved to `spec/backspin_data/` by default
+- Records are saved to `fixtures/backspin/` by default
 - Check YAML files to see recorded command outputs
 
 ### Updating Credential Patterns
