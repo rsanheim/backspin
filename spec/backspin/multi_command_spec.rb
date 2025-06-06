@@ -1,6 +1,10 @@
 require "spec_helper"
 
 RSpec.describe "Backspin multi-command support" do
+  around do |example|
+    with_tmp_dir_for_backspin(&example)
+  end
+
   let(:backspin_path) { Backspin.configuration.backspin_dir }
 
   context "recording multiple commands" do

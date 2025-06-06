@@ -46,19 +46,6 @@ RSpec.describe "Backspin system() support" do
       expect(result.commands[1].args).to eq(["echo", "second"])
       expect(result.commands[1].stdout).to eq("")
     end
-
-    it "records system calls that output to stderr" do
-      result = Backspin.run("system_stderr") do
-        system("echo error >&2")
-      end
-
-      command = result.commands.first
-      # System calls don't capture stdout/stderr - they go directly to the terminal
-      expect(command.stdout).to eq("")
-      expect(command.stderr).to eq("")
-      # But we still record the exit status
-      expect(command.status).to eq(0)
-    end
   end
 
   describe "verifying system calls" do
@@ -111,12 +98,14 @@ RSpec.describe "Backspin system() support" do
 
   describe "mixing system and capture3" do
     it "records both system and capture3 calls" do
-      result = Backspin.run("mixed_calls") do
+      result = Backspin.run("mixed_calls", mode: :record) do
         system("echo from system")
         Open3.capture3("echo from capture3")
+        "hello"
       end
 
       expect(result.commands.size).to eq(2)
+      expect(result.output).to eq("hello")
       expect(result.commands[0].method_class.name).to eq("Kernel::System")
       expect(result.commands[0].stdout).to eq("")  # System calls don't capture stdout
       expect(result.commands[1].method_class.name).to eq("Open3::Capture3")

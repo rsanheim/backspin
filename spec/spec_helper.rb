@@ -4,11 +4,7 @@ require "timecop"
 require "tmpdir"
 
 RSpec.configure do |config|
-  # Enable flags like --only-failures and --next-failure
-  config.example_status_persistence_file_path = ".rspec_status"
   config.filter_run_when_matching :focus
-
-  # Disable RSpec exposing methods globally on `Module` and `main`
   config.disable_monkey_patching!
 
   config.expect_with :rspec do |c|
@@ -22,6 +18,7 @@ RSpec.configure do |config|
   end
 
   module BackspinHelper
+    # Static timestamp to keep record timestamps consistent
     def static_time
       Time.parse("2025-05-01T12:00:00Z")
     end
