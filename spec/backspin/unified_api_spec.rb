@@ -263,20 +263,4 @@ RSpec.describe "Backspin.run unified API" do
       expect(result.inspect).to match(/RecordResult mode=record/)
     end
   end
-
-  describe "integration with existing API" do
-    it "works alongside existing call/verify methods" do
-      # Use new API to record
-      Backspin.run("integration_test") do
-        Open3.capture3("echo integration")
-      end
-
-      # Verify with old API
-      result = Backspin.verify("integration_test") do
-        Open3.capture3("echo integration")
-      end
-
-      expect(result.verified?).to be true
-    end
-  end
 end

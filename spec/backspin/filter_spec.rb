@@ -5,7 +5,7 @@ RSpec.describe "Backspin filtering support" do
     Backspin.reset_configuration!
   end
 
-  describe "Backspin.call with filter" do
+  describe "Backspin.run with filter in record mode" do
     it "applies filter to recorded output before saving" do
       # Filter that normalizes timestamps in the format YYYY-MM-DD HH:MM:SS
       timestamp_filter = ->(data) {
@@ -13,7 +13,7 @@ RSpec.describe "Backspin filtering support" do
         data
       }
 
-      Backspin.call("timestamp_test", filter: timestamp_filter) do
+      Backspin.run("timestamp_test", mode: :record, filter: timestamp_filter) do
         output, _stderr, _status = Open3.capture3("echo 'Test run at 2024-01-15 10:30:45'")
         expect(output).to include("2024-01-15 10:30:45")
       end
@@ -31,7 +31,7 @@ RSpec.describe "Backspin filtering support" do
         data
       }
 
-      Backspin.call("path_test", filter: path_filter) do
+      Backspin.run("path_test", mode: :record, filter: path_filter) do
         Open3.capture3("echo 'File saved to /Users/testuser/project/output.txt'")
       end
 
@@ -47,7 +47,7 @@ RSpec.describe "Backspin filtering support" do
         data
       }
 
-      Backspin.call("multi_command_filter", filter: counter_filter) do
+      Backspin.run("multi_command_filter", mode: :record, filter: counter_filter) do
         Open3.capture3("echo 'Count: 42'")
         Open3.capture3("echo 'Total: 100'")
       end
@@ -65,7 +65,7 @@ RSpec.describe "Backspin filtering support" do
         data
       }
 
-      Backspin.call("full_data_filter", filter: inspection_filter) do
+      Backspin.run("full_data_filter", mode: :record, filter: inspection_filter) do
         Open3.capture3("bash", "-c", "echo 'stdout message' && echo 'stderr message' >&2 && exit 42")
       end
 
@@ -80,15 +80,15 @@ RSpec.describe "Backspin filtering support" do
     end
   end
 
-  describe "Backspin.use_record with filter" do
-    it "applies filter when recording with :once mode" do
+  describe "Backspin.run with filter and different modes" do
+    it "applies filter when recording (auto mode)" do
       filter = ->(data) {
         data["stdout"] = data["stdout"].upcase
         data
       }
 
-      # First call - record with filter
-      Backspin.use_record("use_record_filter", record: :once, filter: filter) do
+      # First call - record with filter (auto mode will record since file doesn't exist)
+      Backspin.run("use_record_filter", filter: filter) do
         Open3.capture3("echo 'hello world'")
       end
 
@@ -97,16 +97,16 @@ RSpec.describe "Backspin filtering support" do
       saved_data = YAML.load_file(record_path)
       expect(saved_data["commands"].first["stdout"]).to eq("HELLO WORLD\n")
 
-      # Second call - replay (filter not applied during replay)
-      result2 = Backspin.use_record("use_record_filter", record: :once) do
+      # Second call - playback mode to get the recorded value
+      result2 = Backspin.run("use_record_filter", mode: :playback) do
         Open3.capture3("echo 'different output'")
       end
 
       # Should get the filtered (uppercase) version from the recording
-      expect(result2[0]).to eq("HELLO WORLD\n")
+      expect(result2.output[0]).to eq("HELLO WORLD\n")
     end
 
-    it "applies filter with :all mode" do
+    it "applies filter with explicit record mode" do
       call_count = 0
       dynamic_filter = ->(data) {
         call_count += 1
@@ -115,12 +115,12 @@ RSpec.describe "Backspin filtering support" do
       }
 
       # First recording
-      Backspin.use_record("all_mode_filter", record: :all, filter: dynamic_filter) do
+      Backspin.run("all_mode_filter", mode: :record, filter: dynamic_filter) do
         Open3.capture3("echo 'first'")
       end
 
       # Second recording (overwrites)
-      Backspin.use_record("all_mode_filter", record: :all, filter: dynamic_filter) do
+      Backspin.run("all_mode_filter", mode: :record, filter: dynamic_filter) do
         Open3.capture3("echo 'second'")
       end
 
@@ -130,19 +130,15 @@ RSpec.describe "Backspin filtering support" do
       expect(saved_data["commands"].first["stdout"]).to eq("filtered output 2\n")
     end
 
-    it "applies filter with :new_episodes mode" do
+    it "applies filter with multiple commands in a single recording" do
       episode_filter = ->(data) {
         data["stdout"] = data["stdout"].gsub("episode", "EPISODE")
         data
       }
 
-      # First recording
-      Backspin.use_record("episodes_filter", record: :all, filter: episode_filter) do
+      # Record multiple commands in one session
+      Backspin.run("episodes_filter", mode: :record, filter: episode_filter) do
         Open3.capture3("echo 'episode 1'")
-      end
-
-      # Add new episode
-      Backspin.use_record("episodes_filter", record: :new_episodes, filter: episode_filter) do
         Open3.capture3("echo 'episode 2'")
       end
 
@@ -154,14 +150,14 @@ RSpec.describe "Backspin filtering support" do
       ])
     end
 
-    it "does not apply filter with :none mode" do
+    it "does not apply filter in playback mode" do
       # Create a recording without filter first
-      Backspin.use_record("none_mode_test", record: :all) do
+      Backspin.run("none_mode_test", mode: :record) do
         Open3.capture3("echo 'original'")
       end
 
-      # Try to use with filter in :none mode - filter should be ignored
-      result = Backspin.use_record("none_mode_test", record: :none, filter: ->(d) {
+      # Try to use with filter in playback mode - filter should be ignored
+      result = Backspin.run("none_mode_test", mode: :playback, filter: ->(d) {
         d["stdout"] = "FILTERED"
         d
       }) do
@@ -169,13 +165,13 @@ RSpec.describe "Backspin filtering support" do
       end
 
       # Should get original recording, not filtered
-      expect(result[0]).to eq("original\n")
+      expect(result.output[0]).to eq("original\n")
     end
   end
 
   describe "filter edge cases" do
     it "handles nil filter gracefully" do
-      Backspin.call("nil_filter", filter: nil) do
+      Backspin.run("nil_filter", mode: :record, filter: nil) do
         output, _, _ = Open3.capture3("echo 'test'")
         expect(output).to eq("test\n")
       end
@@ -193,7 +189,7 @@ RSpec.describe "Backspin filtering support" do
         data
       }
 
-      Backspin.call("multi_field_filter", filter: multi_field_filter) do
+      Backspin.run("multi_field_filter", mode: :record, filter: multi_field_filter) do
         Open3.capture3("bash", "-c", "echo 'out' && echo 'err' >&2 && exit 1")
       end
 
@@ -214,7 +210,7 @@ RSpec.describe "Backspin filtering support" do
         data
       }
 
-      Backspin.call("credential_filter", filter: filter) do
+      Backspin.run("credential_filter", mode: :record, filter: filter) do
         Open3.capture3("echo 'My API key is AKIA1234567890ABCDEF'")
       end
 

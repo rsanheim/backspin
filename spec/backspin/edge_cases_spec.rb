@@ -3,14 +3,14 @@ require "spec_helper"
 RSpec.describe "Backspin edge cases" do
   it "raises error for empty record name" do
     expect {
-      Backspin.call("") do
+      Backspin.run("", mode: :record) do
         Open3.capture3("echo empty")
       end
     }.to raise_error(ArgumentError, "record_name is required")
   end
 
   it "uses provided record name" do
-    result = Backspin.call("custom_name") do
+    result = Backspin.run("custom_name", mode: :record) do
       Open3.capture3("echo custom")
     end
 
@@ -18,7 +18,7 @@ RSpec.describe "Backspin edge cases" do
   end
 
   it "sanitizes record names with special characters" do
-    result = Backspin.call("test/with/slashes") do
+    result = Backspin.run("test/with/slashes", mode: :record) do
       Open3.capture3("echo slashes")
     end
 

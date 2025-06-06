@@ -3,7 +3,7 @@ require "spec_helper"
 RSpec.describe "Backspin system() support" do
   describe "recording system calls" do
     it "records a simple system call" do
-      result = Backspin.call("system_echo") do
+      result = Backspin.run("system_echo", mode: :record) do
         system("echo hello")
       end
 
@@ -18,7 +18,7 @@ RSpec.describe "Backspin system() support" do
 
     it "records system call exit status and preserves return value" do
       return_values = []
-      result = Backspin.call("system_false") do
+      result = Backspin.run("system_false", mode: :record) do
         return_values << system("true")   # Should return true
         return_values << system("false")  # Should return false
       end
@@ -29,7 +29,7 @@ RSpec.describe "Backspin system() support" do
     end
 
     it "records multiple system calls" do
-      result = Backspin.call("multi_system") do
+      result = Backspin.run("multi_system", mode: :record) do
         system("echo first")
         system("echo second")
       end
@@ -42,7 +42,7 @@ RSpec.describe "Backspin system() support" do
     end
 
     it "records system calls that output to stderr" do
-      result = Backspin.call("system_stderr") do
+      result = Backspin.run("system_stderr", mode: :record) do
         system("echo error >&2")
       end
 
@@ -58,12 +58,12 @@ RSpec.describe "Backspin system() support" do
   describe "verifying system calls" do
     it "verifies matching system calls" do
       # Record
-      Backspin.call("verify_system") do
+      Backspin.run("verify_system", mode: :record) do
         system("echo hello")
       end
 
       # Verify - should pass because command and exit status match
-      result = Backspin.verify("verify_system") do
+      result = Backspin.run("verify_system") do
         system("echo hello")
       end
 
@@ -72,12 +72,12 @@ RSpec.describe "Backspin system() support" do
 
     it "detects non-matching system exit status" do
       # Record a successful command
-      Backspin.call("verify_system_diff") do
+      Backspin.run("verify_system_diff", mode: :record) do
         system("true")  # exit status 0
       end
 
       # Verify with a failing command - should fail
-      result = Backspin.verify("verify_system_diff") do
+      result = Backspin.run("verify_system_diff") do
         system("false")  # exit status 1
       end
 
@@ -88,24 +88,24 @@ RSpec.describe "Backspin system() support" do
   describe "playback mode" do
     it "plays back system calls without executing" do
       # Record
-      Backspin.call("playback_system") do
+      Backspin.run("playback_system", mode: :record) do
         system("echo recorded")
       end
 
       # Playback
-      result = Backspin.verify("playback_system", mode: :playback) do
+      result = Backspin.run("playback_system", mode: :playback) do
         # This should not actually execute
         system("echo not executed")
       end
 
       expect(result.verified?).to be true
-      expect(result.command_executed?).to be false
+      expect(result.playback?).to be true
     end
   end
 
   describe "mixing system and capture3" do
     it "records both system and capture3 calls" do
-      result = Backspin.call("mixed_calls") do
+      result = Backspin.run("mixed_calls", mode: :record) do
         system("echo from system")
         Open3.capture3("echo from capture3")
       end
