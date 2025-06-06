@@ -1,4 +1,4 @@
-# Backspin   [![Gem Version](https://badge.fury.io/rb/backspin.svg)](https://badge.fury.io/rb/backspin) [![CircleCI](https://dl.circleci.com/status-badge/img/gh/rsanheim/backspin/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/rsanheim/backspin/tree/main)
+# Backspin  [![Gem Version](https://badge.fury.io/rb/backspin.svg?icon=si%3Arubygems)](https://badge.fury.io/rb/backspin)  [![CircleCI](https://dl.circleci.com/status-badge/img/gh/rsanheim/backspin/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/rsanheim/backspin/tree/main)
 
 Backspin records and replays CLI interactions in Ruby for easy snapshot testing of command-line interfaces. Currently supports `Open3.capture3` and `system` and requires `rspec-mocks`.  More system calls and test integrations are welcome - send a PR!
 
