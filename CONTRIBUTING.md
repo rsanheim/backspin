@@ -99,7 +99,7 @@ Backspin is a Ruby gem for characterization testing of command-line interfaces. 
 
 #### Debugging Tests
 
-- Records are saved to `spec/backspin_data/` by default
+- Records are saved to `fixtures/backspin/` by default
 - Check YAML files to see recorded command outputs
 
 ## Testing
@@ -125,7 +125,7 @@ Backspin uses integration-focused tests that exercise the full stack. When writi
 - Avoid shared contexts or helpers that hide important test details
 - Use real shell commands (`echo`, `date`, etc.) for testing
 - Ensure configuration is reset between tests to avoid side effects
-- Verify new or updated test records in `spec/backspin_data/`
+- Verify new or updated test records in `fixtures/backspin/`
 
 Example test structure:
 
