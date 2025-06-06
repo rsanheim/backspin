@@ -2,7 +2,7 @@ require "spec_helper"
 
 RSpec.describe "Backspin credential scrubbing" do
   around do |example|
-    with_tmp_dir_for_backspin(&example) 
+    with_tmp_dir_for_backspin(&example)
   end
 
   describe "configuration" do

@@ -3,7 +3,6 @@
 require "spec_helper"
 
 RSpec.describe "Backspin.run with multiple commands" do
-
   around do |example|
     with_tmp_dir_for_backspin(&example)
   end
