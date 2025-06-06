@@ -5,10 +5,6 @@ RSpec.describe "Backspin filtering support" do
     Backspin.reset_configuration!
   end
 
-  def static_time
-    Time.parse("2025-05-01T12:00:00Z")
-  end
-
   around do |example|
     Timecop.freeze(static_time) do
       example.run

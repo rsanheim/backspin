@@ -21,7 +21,11 @@ RSpec.configure do |config|
     Backspin.reset_configuration!
   end
 
-  config.include(Module.new {
+  module BackspinHelper
+    def static_time
+      Time.parse("2025-05-01T12:00:00Z")
+    end
+
     # Setup Backspin to use a temporary directory, and reset config after the block
     def with_tmp_dir_for_backspin(&block)
       Dir.mktmpdir("backspin_data") do |dir|
@@ -35,5 +39,7 @@ RSpec.configure do |config|
         Backspin.reset_configuration!
       end
     end
-  })
+  end
+
+  config.include(BackspinHelper)
 end
