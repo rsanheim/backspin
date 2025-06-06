@@ -88,28 +88,27 @@ RSpec.describe Backspin do
   end
 
   context "run with invalid args"
-    it "raises ArgumentError when no record name is provided" do
-      expect {
-        Backspin.run do
-          Open3.capture3("echo hello")
-        end
-      }.to raise_error(ArgumentError, /wrong number of arguments/)
-    end
+  it "raises ArgumentError when no record name is provided" do
+    expect {
+      Backspin.run do
+        Open3.capture3("echo hello")
+      end
+    }.to raise_error(ArgumentError, /wrong number of arguments/)
+  end
 
-    it "raises ArgumentError when record name is nil" do
-      expect {
-        Backspin.run(nil, mode: :record) do
-          Open3.capture3("echo hello")
-        end
-      }.to raise_error(ArgumentError, "record_name is required")
-    end
+  it "raises ArgumentError when record name is nil" do
+    expect {
+      Backspin.run(nil, mode: :record) do
+        Open3.capture3("echo hello")
+      end
+    }.to raise_error(ArgumentError, "record_name is required")
+  end
 
-    it "raises ArgumentError when record name is empty" do
-      expect {
-        Backspin.run("", mode: :record) do
-          Open3.capture3("echo hello")
-        end
-      }.to raise_error(ArgumentError, "record_name is required")
-    end
-
+  it "raises ArgumentError when record name is empty" do
+    expect {
+      Backspin.run("", mode: :record) do
+        Open3.capture3("echo hello")
+      end
+    }.to raise_error(ArgumentError, "record_name is required")
+  end
 end
