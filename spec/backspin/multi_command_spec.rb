@@ -24,7 +24,7 @@ RSpec.describe "Backspin multi-command support" do
       end
 
       # Verify record was created with array
-      record_path = backspin_path.join("#{record_name}.yaml")
+      record_path = backspin_path.join("#{record_name}.yml")
       expect(record_path).to exist
 
       record_data = YAML.load_file(record_path)
@@ -70,7 +70,7 @@ RSpec.describe "Backspin multi-command support" do
       end
 
       # Verify record structure
-      record_path = backspin_path.join("#{record_name}.yaml")
+      record_path = backspin_path.join("#{record_name}.yml")
       record_data = YAML.load_file(record_path)
       expect(record_data).to be_a(Hash)
       expect(record_data["format_version"]).to eq("2.0")
@@ -115,7 +115,7 @@ RSpec.describe "Backspin multi-command support" do
       end
 
       # Verify record is array even for single command
-      record_path = backspin_path.join("#{record_name}.yaml")
+      record_path = backspin_path.join("#{record_name}.yml")
       record_data = YAML.load_file(record_path)
       expect(record_data).to be_a(Hash)
       expect(record_data["format_version"]).to eq("2.0")

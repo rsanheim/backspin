@@ -19,7 +19,6 @@ module Backspin
       )
     end
 
-    # Delegate methods to result for backwards compatibility
     def stdout
       @result.stdout
     end

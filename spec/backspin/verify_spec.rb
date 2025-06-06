@@ -111,7 +111,7 @@ RSpec.describe "Backspin verify functionality" do
         Backspin.run("nonexistent", mode: :verify) do
           Open3.capture3("echo test")
         end
-      }.to raise_error(Backspin::RecordNotFoundError, /nonexistent.yaml/)
+      }.to raise_error(Backspin::RecordNotFoundError, /nonexistent.yml/)
     end
 
     it "provides helpful error messages on verification failure" do

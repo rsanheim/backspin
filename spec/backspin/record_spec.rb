@@ -5,7 +5,7 @@ RSpec.describe Backspin::Record do
     with_tmp_dir_for_backspin(&example)
   end
 
-  let(:record_path) { Backspin.configuration.backspin_dir.join("test_record.yaml") }
+  let(:record_path) { Backspin.configuration.backspin_dir.join("test_record.yml") }
   let(:record) { described_class.new(record_path) }
 
   describe "#initialize" do

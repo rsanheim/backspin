@@ -13,7 +13,7 @@ RSpec.describe "Backspin.run" do
 
       expect(first_result.output).to eq(["hello from use_record\n", "", 0])
       expect(first_result.mode).to eq(:record)
-      expect(Backspin.configuration.backspin_dir.join("unified_test.yaml")).to exist
+      expect(Backspin.configuration.backspin_dir.join("unified_test.yml")).to exist
 
       # Second run - should verify (auto mode becomes verify when file exists)
       second_result = Backspin.run("unified_test") do

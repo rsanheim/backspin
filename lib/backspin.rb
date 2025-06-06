@@ -310,7 +310,7 @@ module Backspin
       backspin_dir = configuration.backspin_dir
       backspin_dir.mkpath
 
-      File.join(backspin_dir, "#{name}.yaml")
+      File.join(backspin_dir, "#{name}.yml")
     end
   end
 end

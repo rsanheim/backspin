@@ -4,6 +4,7 @@ module Backspin
   class NoMoreRecordingsError < StandardError; end
 
   class Record
+    FORMAT_VERSION = "2.0"
     attr_reader :path, :commands, :first_recorded_at
 
     def initialize(path)
@@ -22,10 +23,9 @@ module Backspin
 
     def save(filter: nil)
       FileUtils.mkdir_p(File.dirname(@path))
-      # New format: top-level metadata with commands array
       record_data = {
         "first_recorded_at" => @first_recorded_at,
-        "format_version" => "2.0",
+        "format_version" => FORMAT_VERSION,
         "commands" => @commands.map { |cmd| cmd.to_h(filter: filter) }
       }
       File.write(@path, record_data.to_yaml)

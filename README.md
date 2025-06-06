@@ -61,7 +61,7 @@ end
 result = Backspin.run("echo_test", mode: :record) do
   Open3.capture3("echo hello")
 end
-# This will save the output to `spec/backspin_data/echo_test.yaml`.
+# This will save the output to `spec/backspin_data/echo_test.yml`.
 
 # Explicit verify mode: Always verify against existing recording
 result = Backspin.run("echo_test", mode: :verify) do

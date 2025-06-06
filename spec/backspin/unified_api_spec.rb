@@ -22,7 +22,7 @@ RSpec.describe "Backspin.run unified API" do
         expect(result).to be_success
 
         # Verify file was created
-        expect(Backspin.configuration.backspin_dir.join("unified_basic.yaml")).to exist
+        expect(Backspin.configuration.backspin_dir.join("unified_basic.yml")).to exist
       end
 
       it "verifies on subsequent runs when record exists" do

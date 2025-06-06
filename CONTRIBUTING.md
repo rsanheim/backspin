@@ -161,7 +161,6 @@ end
 
 - Keep changes focused and atomic
 - Include tests for new functionality
-- Maintain backward compatibility when possible
 - Update examples in README.md if changing public APIs
 - Ensure CI passes (tests against Ruby 3.2, 3.3, and 3.4)
 
@@ -203,8 +202,7 @@ We welcome feature requests! When proposing new features:
 1. Check existing issues to avoid duplicates
 2. Describe the use case and motivation
 3. Provide code examples of how the feature would work
-4. Consider backward compatibility
-5. Be open to discussion and alternative approaches
+4. Be open to discussion and alternative approaches
 
 ## Additional Resources
 

@@ -26,7 +26,7 @@ RSpec.describe "Backspin filtering support" do
 
       # Verify the saved file has normalized timestamps
       pp Backspin.configuration.backspin_dir
-      record_path = Backspin.configuration.backspin_dir.join("timestamp_test.yaml")
+      record_path = Backspin.configuration.backspin_dir.join("timestamp_test.yml")
       saved_data = YAML.load_file(record_path)
       expect(saved_data["commands"].first["stdout"]).to eq("Test run at TIMESTAMP\n")
     end
@@ -42,7 +42,7 @@ RSpec.describe "Backspin filtering support" do
         Open3.capture3("echo 'File saved to /Users/testuser/project/output.txt'")
       end
 
-      record_path = Backspin.configuration.backspin_dir.join("path_test.yaml")
+      record_path = Backspin.configuration.backspin_dir.join("path_test.yml")
       saved_data = YAML.load_file(record_path)
       expect(saved_data["commands"].first["stdout"]).to eq("File saved to PROJECT_ROOT/output.txt\n")
     end
@@ -59,7 +59,7 @@ RSpec.describe "Backspin filtering support" do
         Open3.capture3("echo 'Total: 100'")
       end
 
-      record_path = Backspin.configuration.backspin_dir.join("multi_command_filter.yaml")
+      record_path = Backspin.configuration.backspin_dir.join("multi_command_filter.yml")
       saved_data = YAML.load_file(record_path)
       expect(saved_data["commands"][0]["stdout"]).to eq("Count: X\n")
       expect(saved_data["commands"][1]["stdout"]).to eq("Total: X\n")
@@ -100,7 +100,7 @@ RSpec.describe "Backspin filtering support" do
       end
 
       # Check the saved file has filtered content
-      record_path = Backspin.configuration.backspin_dir.join("use_record_filter.yaml")
+      record_path = Backspin.configuration.backspin_dir.join("use_record_filter.yml")
       saved_data = YAML.load_file(record_path)
       expect(saved_data["commands"].first["stdout"]).to eq("HELLO WORLD\n")
 
@@ -131,7 +131,7 @@ RSpec.describe "Backspin filtering support" do
         Open3.capture3("echo 'second'")
       end
 
-      record_path = Backspin.configuration.backspin_dir.join("all_mode_filter.yaml")
+      record_path = Backspin.configuration.backspin_dir.join("all_mode_filter.yml")
       saved_data = YAML.load_file(record_path)
       # Should have the second recording with filter applied
       expect(saved_data["commands"].first["stdout"]).to eq("filtered output 2\n")
@@ -149,7 +149,7 @@ RSpec.describe "Backspin filtering support" do
         Open3.capture3("echo 'episode 2'")
       end
 
-      record_path = Backspin.configuration.backspin_dir.join("episodes_filter.yaml")
+      record_path = Backspin.configuration.backspin_dir.join("episodes_filter.yml")
       saved_data = YAML.load_file(record_path)
       expect(saved_data["commands"].map { |c| c["stdout"] }).to eq([
         "EPISODE 1\n",
@@ -183,7 +183,7 @@ RSpec.describe "Backspin filtering support" do
         expect(output).to eq("test\n")
       end
 
-      record_path = Backspin.configuration.backspin_dir.join("nil_filter.yaml")
+      record_path = Backspin.configuration.backspin_dir.join("nil_filter.yml")
       saved_data = YAML.load_file(record_path)
       expect(saved_data["commands"].first["stdout"]).to eq("test\n")
     end
@@ -200,7 +200,7 @@ RSpec.describe "Backspin filtering support" do
         Open3.capture3("bash", "-c", "echo 'out' && echo 'err' >&2 && exit 1")
       end
 
-      record_path = Backspin.configuration.backspin_dir.join("multi_field_filter.yaml")
+      record_path = Backspin.configuration.backspin_dir.join("multi_field_filter.yml")
       saved_data = YAML.load_file(record_path)
       command = saved_data["commands"].first
       expect(command["stdout"]).to eq("modified stdout")
@@ -221,7 +221,7 @@ RSpec.describe "Backspin filtering support" do
         Open3.capture3("echo 'My API key is AKIA1234567890ABCDEF'")
       end
 
-      record_path = Backspin.configuration.backspin_dir.join("credential_filter.yaml")
+      record_path = Backspin.configuration.backspin_dir.join("credential_filter.yml")
       saved_data = YAML.load_file(record_path)
       # Should be uppercased AND have credentials scrubbed
       expect(saved_data["commands"].first["stdout"]).to eq("MY API KEY IS ********************\n")

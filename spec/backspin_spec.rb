@@ -17,11 +17,11 @@ RSpec.describe Backspin do
       expect(result.commands.size).to eq(1)
       expect(result.commands.first.method_class).to eq(Open3::Capture3)
       expect(result.commands.first.args).to eq(["echo", "hello"])
-      expect(result.record_path.to_s).to end_with("echo_hello.yaml")
+      expect(result.record_path.to_s).to end_with("echo_hello.yml")
 
-      expect(backspin_path.join("echo_hello.yaml")).to exist
+      expect(backspin_path.join("echo_hello.yml")).to exist
 
-      results = YAML.load_file(backspin_path.join("echo_hello.yaml"))
+      results = YAML.load_file(backspin_path.join("echo_hello.yml"))
       expect(results).to be_a(Hash)
       expect(results["format_version"]).to eq("2.0")
       expect(results["first_recorded_at"]).not_to be_nil

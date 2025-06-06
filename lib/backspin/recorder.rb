@@ -6,6 +6,7 @@ module Backspin
   # Handles stubbing and recording of command executions
   class Recorder
     include RSpec::Mocks::ExampleMethods
+    SUPPORTED_COMMAND_TYPES = [:capture3, :system]
 
     attr_reader :commands, :verification_data, :mode, :record
 
@@ -17,7 +18,7 @@ module Backspin
     end
 
     def record_calls(*command_types)
-      command_types = [:capture3, :system] if command_types.empty?
+      command_types = SUPPORTED_COMMAND_TYPES if command_types.empty?
 
       command_types.each do |command_type|
         record_call(command_type)
@@ -31,7 +32,7 @@ module Backspin
       when :capture3
         setup_capture3_call_stub
       else
-        raise ArgumentError, "Unknown command type: #{command_type}"
+        raise ArgumentError, "Unsupported command type: #{command_type} - currently supported types: #{SUPPORTED_COMMAND_TYPES.join(", ")}"
       end
     end
 
@@ -66,7 +67,6 @@ module Backspin
           # For system calls, we only track the exit status
           @verification_data["stdout"] = ""
           @verification_data["stderr"] = ""
-          # Derive exit status from result: true = 0, false = non-zero
           @verification_data["status"] = result ? 0 : 1
 
           result
@@ -107,12 +107,10 @@ module Backspin
       allow_any_instance_of(Object).to receive(:system) do |receiver, *args|
         command = @record.next_command
 
-        # Make sure this is a system command
         unless command.method_class == ::Kernel::System
           raise RecordNotFoundError, "Expected Kernel::System command but got #{command.method_class.name}"
         end
 
-        # Return true if exit status was 0, false otherwise
         command.status == 0
       rescue NoMoreRecordingsError => e
         raise RecordNotFoundError, e.message
@@ -121,17 +119,14 @@ module Backspin
 
     def setup_capture3_call_stub
       allow(Open3).to receive(:capture3).and_wrap_original do |original_method, *args|
-        # Execute the real command
         stdout, stderr, status = original_method.call(*args)
 
-        # Parse command args
         cmd_args = if args.length == 1 && args.first.is_a?(String)
           args.first.split(" ")
         else
           args
         end
 
-        # Create command with interaction data
         command = Command.new(
           method_class: Open3::Capture3,
           args: cmd_args,
@@ -142,14 +137,12 @@ module Backspin
         )
         @commands << command
 
-        # Return original result
         [stdout, stderr, status]
       end
     end
 
     def setup_system_call_stub
       allow_any_instance_of(Object).to receive(:system).and_wrap_original do |original_method, receiver, *args|
-        # Execute the real system call
         result = original_method.call(receiver, *args)
 
         # Parse command args based on how system was called
@@ -161,14 +154,9 @@ module Backspin
           args
         end
 
-        # For system calls, stdout and stderr are not captured
-        # The caller of system() doesn't have access to them
-        stdout = ""
-        stderr = ""
-        # Derive exit status from result: true = 0, false = non-zero, nil = command failed
+        stdout, stderr = "", ""
         status = result ? 0 : 1
 
-        # Create command with interaction data
         command = Command.new(
           method_class: ::Kernel::System,
           args: parsed_args,
@@ -179,7 +167,6 @@ module Backspin
         )
         @commands << command
 
-        # Return the original result (true/false/nil)
         result
       end
     end
