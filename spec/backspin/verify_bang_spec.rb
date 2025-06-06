@@ -5,7 +5,7 @@ RSpec.describe "Backspin verify! functionality" do
 
   before do
     # Record a command for testing
-    Backspin.run("echo_verify_bang", mode: :record) do
+    Backspin.run("echo_verify_bang") do
       Open3.capture3("echo hello")
     end
   end

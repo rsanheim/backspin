@@ -10,7 +10,7 @@ RSpec.describe "Backspin edge cases" do
   end
 
   it "uses provided record name" do
-    result = Backspin.run("custom_name", mode: :record) do
+    result = Backspin.run("custom_name") do
       Open3.capture3("echo custom")
     end
 
@@ -18,7 +18,7 @@ RSpec.describe "Backspin edge cases" do
   end
 
   it "sanitizes record names with special characters" do
-    result = Backspin.run("test/with/slashes", mode: :record) do
+    result = Backspin.run("test/with/slashes") do
       Open3.capture3("echo slashes")
     end
 
