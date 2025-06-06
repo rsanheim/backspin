@@ -1,0 +1,17 @@
+---
+first_recorded_at: '2025-05-01T12:00:00Z'
+format_version: '2.0'
+commands:
+- command_type: Open3::Capture3
+  args:
+  - bash
+  - "-c"
+  - echo 'stdout message' && echo 'stderr message' >&2 && exit 42
+  stdout: 'stdout message
+
+    '
+  stderr: 'stderr message
+
+    '
+  status: 42
+  recorded_at: '2025-05-01T12:00:00Z'

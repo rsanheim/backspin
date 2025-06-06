@@ -17,14 +17,14 @@ bin/setup
 ### Testing
 ```bash
 bin/rake spec                    # Run all tests
-rspec spec/[file]           # Run specific test file
-rspec spec/[file]:[line]    # Run specific test
+bin/rspec spec/[file]           # Run specific test file
+bin/rspec spec/[file]:[line]    # Run specific test
 ```
 
 ### Building and Releasing
 ```bash
-bundle exec rake install     # Install gem locally for testing
-bundle exec rake release     # Release to RubyGems (updates version, tags, pushes)
+bin/rake install     # Install gem locally for testing
+bin/rake release     # Release to RubyGems (updates version, tags, pushes)
 ```
 
 ### Code Quality

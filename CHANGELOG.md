@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.0] - 2025-06-06
+
+Simpler, unified API: `Backspin.run` and `Backspin run!` methods that automatically record on first use and verify on subsequent runs. `run!` will raise an error if results differ, whereas `run` will return the result for the caller to decide what to do with
+
 ## [0.3.0] - 2025-06-05
 - Scrub credentials from command arguments
 

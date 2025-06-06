@@ -1,6 +1,10 @@
 require "spec_helper"
 
 RSpec.describe "Backspin multi-command support" do
+  around do |example|
+    with_tmp_dir_for_backspin(&example)
+  end
+
   let(:backspin_path) { Backspin.configuration.backspin_dir }
 
   context "recording multiple commands" do
@@ -8,7 +12,7 @@ RSpec.describe "Backspin multi-command support" do
       record_name = "multi_command_test"
 
       # First run: record multiple commands
-      Backspin.use_record(record_name) do
+      Backspin.run(record_name) do
         stdout1, _, _ = Open3.capture3("echo command1")
         expect(stdout1).to eq("command1\n")
 
@@ -20,7 +24,7 @@ RSpec.describe "Backspin multi-command support" do
       end
 
       # Verify record was created with array
-      record_path = backspin_path.join("#{record_name}.yaml")
+      record_path = backspin_path.join("#{record_name}.yml")
       expect(record_path).to exist
 
       record_data = YAML.load_file(record_path)
@@ -32,7 +36,7 @@ RSpec.describe "Backspin multi-command support" do
 
       # Second run: replay from record
       replay_outputs = []
-      Backspin.use_record(record_name) do
+      Backspin.run(record_name) do
         stdout1, _, _ = Open3.capture3("echo command1")
         replay_outputs << stdout1
 
@@ -49,7 +53,7 @@ RSpec.describe "Backspin multi-command support" do
     it "handles mixed commands with different outputs" do
       record_name = "mixed_commands"
 
-      Backspin.use_record(record_name) do
+      Backspin.run(record_name) do
         # Different commands with different outputs
         stdout1, _, status1 = Open3.capture3("echo success")
         expect(stdout1).to eq("success\n")
@@ -66,7 +70,7 @@ RSpec.describe "Backspin multi-command support" do
       end
 
       # Verify record structure
-      record_path = backspin_path.join("#{record_name}.yaml")
+      record_path = backspin_path.join("#{record_name}.yml")
       record_data = YAML.load_file(record_path)
       expect(record_data).to be_a(Hash)
       expect(record_data["format_version"]).to eq("2.0")
@@ -86,32 +90,32 @@ RSpec.describe "Backspin multi-command support" do
       record_name = "insufficient_recordings"
 
       # Record only 2 commands
-      Backspin.use_record(record_name) do
+      Backspin.run(record_name) do
         Open3.capture3("echo first")
         Open3.capture3("echo second")
       end
 
       # Try to replay 3 commands - should fail on the third
       expect {
-        Backspin.use_record(record_name) do
+        Backspin.run(record_name) do
           Open3.capture3("echo first")
           Open3.capture3("echo second")
           Open3.capture3("echo third")  # This should fail
         end
-      }.to raise_error(Backspin::RecordNotFoundError, /No more recordings available/)
+      }.to raise_error(Backspin::RecordNotFoundError, /No more recorded commands/)
     end
 
     it "saves single commands as arrays for consistency" do
       record_name = "single_command_array"
 
       # Record single command (should save as array)
-      Backspin.use_record(record_name) do
+      Backspin.run(record_name) do
         stdout, _, _ = Open3.capture3("echo single")
         expect(stdout).to eq("single\n")
       end
 
       # Verify record is array even for single command
-      record_path = backspin_path.join("#{record_name}.yaml")
+      record_path = backspin_path.join("#{record_name}.yml")
       record_data = YAML.load_file(record_path)
       expect(record_data).to be_a(Hash)
       expect(record_data["format_version"]).to eq("2.0")
@@ -120,7 +124,7 @@ RSpec.describe "Backspin multi-command support" do
       expect(record_data["commands"].first["stdout"]).to eq("single\n")
 
       # Should still replay correctly
-      Backspin.use_record(record_name) do
+      Backspin.run(record_name) do
         stdout, _, _ = Open3.capture3("echo single")
         expect(stdout).to eq("single\n")
       end

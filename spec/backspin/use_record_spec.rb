@@ -1,43 +1,51 @@
 require "spec_helper"
 
-RSpec.describe "Backspin.use_record" do
-  let(:record_dir) { Pathname.new("tmp/backspin_data") }
-
-  before do
-    # Use tmp for integration tests that modify files
-    Backspin.configure do |config|
-      config.backspin_dir = record_dir
-    end
-    FileUtils.rm_rf(record_dir)
-  end
-
-  after do
-    FileUtils.rm_rf(record_dir)
-    Backspin.reset_configuration!
+RSpec.describe "Backspin.run" do
+  around do |example|
+    with_tmp_dir_for_backspin(&example)
   end
 
   describe "VCR-style unified API" do
-    it "records on first run, replays on subsequent runs" do
-      # First run - should record
-      first_result = Backspin.use_record("unified_test") do
+    it "records on first run, verifies on subsequent runs in auto mode" do
+      first_result = Backspin.run("unified_test") do
         Open3.capture3("echo hello from use_record")
       end
 
-      expect(first_result).to eq(["hello from use_record\n", "", 0])
-      expect(record_dir.join("unified_test.yaml")).to exist
+      expect(first_result.output).to eq(["hello from use_record\n", "", 0])
+      expect(first_result.mode).to eq(:record)
+      expect(Backspin.configuration.backspin_dir.join("unified_test.yml")).to exist
 
-      # Second run - should replay without executing
-      second_result = Backspin.use_record("unified_test") do
-        Open3.capture3("echo this should not run")
+      # Second run - should verify (auto mode becomes verify when file exists)
+      second_result = Backspin.run("unified_test") do
+        Open3.capture3("echo hello from use_record")
+      end
+
+      expect(second_result.output).to eq(["hello from use_record\n", "", 0])
+      expect(second_result.mode).to eq(:verify)
+      expect(second_result.verified?).to eq(true)
+    end
+
+    it "replays without executing in playback mode" do
+      # First record
+      Backspin.run("playback_test") do
+        Open3.capture3("echo hello from playback")
+      end
+
+      # Use playback mode to replay without executing
+      result = Backspin.run("playback_test", mode: :playback) do
+        stdout, stderr, status = Open3.capture3("echo this should not run")
+        # Return the normalized status ourselves
+        [stdout, stderr, status.respond_to?(:exitstatus) ? status.exitstatus : status]
       end
 
       # Should get the recorded output, not "this should not run"
-      expect(second_result).to eq(["hello from use_record\n", "", 0])
+      expect(result.output).to eq(["hello from playback\n", "", 0])
+      expect(result.mode).to eq(:playback)
     end
 
     it "requires record name" do
       expect {
-        Backspin.use_record do
+        Backspin.run do
           Open3.capture3("echo auto-named")
         end
       }.to raise_error(ArgumentError, "wrong number of arguments (given 0, expected 1..2)")
@@ -45,7 +53,7 @@ RSpec.describe "Backspin.use_record" do
 
     it "raises ArgumentError when record name is nil" do
       expect {
-        Backspin.use_record(nil) do
+        Backspin.run(nil) do
           Open3.capture3("echo test")
         end
       }.to raise_error(ArgumentError, "record_name is required")
@@ -53,108 +61,91 @@ RSpec.describe "Backspin.use_record" do
 
     it "raises ArgumentError when record name is empty" do
       expect {
-        Backspin.use_record("") do
+        Backspin.run("") do
           Open3.capture3("echo test")
         end
       }.to raise_error(ArgumentError, "record_name is required")
     end
 
     it "supports record modes" do
-      # Clean up any existing file first
-      FileUtils.rm_f(record_dir.join("modes_test.yaml"))
-
       # Record initially
-      Backspin.use_record("modes_test") do
+      Backspin.run("modes_test") do
         Open3.capture3("echo first")
       end
 
-      # :once mode (default) - use existing record
-      result = Backspin.use_record("modes_test", record: :once) do
-        Open3.capture3("echo second")
+      # Auto mode with existing file - verifies
+      result = Backspin.run("modes_test") do
+        Open3.capture3("echo first")  # Must match recorded command for verification
       end
-      expect(result[0]).to eq("first\n")
+      expect(result.output[0]).to eq("first\n")
+      expect(result.mode).to eq(:verify)
 
-      # :all mode - always re-record
-      result = Backspin.use_record("modes_test", record: :all) do
+      # :record mode - always re-record
+      result = Backspin.run("modes_test", mode: :record) do
         Open3.capture3("echo third")
       end
-      expect(result[0]).to eq("third\n")
+      expect(result.output[0]).to eq("third\n")
+      expect(result.mode).to eq(:record)
 
-      # Verify it was re-recorded
-      result = Backspin.use_record("modes_test") do
-        Open3.capture3("echo fourth")
+      # Verify it was re-recorded - now verifies against "third"
+      result = Backspin.run("modes_test") do
+        Open3.capture3("echo third")  # Must match new recording
       end
-      expect(result[0]).to eq("third\n")
+      expect(result.output[0]).to eq("third\n")
+      expect(result.verified?).to eq(true)
     end
 
     it "supports :none mode - never record" do
-      # Ensure record doesn't exist
-      FileUtils.rm_f(record_dir.join("none_mode_test.yaml"))
-
       expect {
-        Backspin.use_record("none_mode_test", record: :none) do
+        Backspin.run("none_mode_test", mode: :playback) do
           Open3.capture3("echo test")
         end
       }.to raise_error(Backspin::RecordNotFoundError)
     end
 
-    it "supports :new_episodes mode - appends new recordings" do
-      # Record initial command
-      Backspin.use_record("episodes_test", record: :new_episodes) do
-        Open3.capture3("echo episode1")
-      end
-
-      # Different command - should record new episode
-      result = Backspin.use_record("episodes_test", record: :new_episodes) do
-        Open3.capture3("echo episode2")
-      end
-      expect(result[0]).to eq("episode2\n")
-
-      # Verify multiple recordings exist
-      record_data = YAML.load_file(record_dir.join("episodes_test.yaml"))
-      expect(record_data).to be_a(Hash)
-      expect(record_data["format_version"]).to eq("2.0")
-      expect(record_data["commands"]).to be_an(Array)
-      expect(record_data["commands"].map { |r| r["stdout"] }).to include("episode1\n", "episode2\n")
+    xit "supports :new_episodes mode - not supported in new API" do
+      # This mode is not supported in the new API
+      # Keeping the test as a placeholder to document the removed functionality
     end
 
     it "returns stdout, stderr, and status like capture3" do
-      stdout, stderr, status = Backspin.use_record("full_output_test") do
+      result = Backspin.run("full_output_test") do
         Open3.capture3("sh -c 'echo stdout; echo stderr >&2; exit 42'")
       end
 
+      stdout, stderr, status = result.output
       expect(stdout).to eq("stdout\n")
       expect(stderr).to eq("stderr\n")
       expect(status).to eq(42)
     end
 
     it "supports options hash" do
-      result = Backspin.use_record("options_test",
-        record: :all,
+      result = Backspin.run("options_test",
+        mode: :record,
         erb: true,
         preserve_exact_body_bytes: true) do
         Open3.capture3("echo with options")
       end
 
-      expect(result[0]).to eq("with options\n")
+      expect(result.output[0]).to eq("with options\n")
     end
   end
 
   describe "block return values" do
     it "returns the value from the block" do
-      result = Backspin.use_record("return_value_test") do
+      result = Backspin.run("return_value_test") do
         stdout, _, _ = Open3.capture3("echo test")
         "custom return: #{stdout.strip}"
       end
 
-      expect(result).to eq("custom return: test")
+      expect(result.output).to eq("custom return: test")
     end
   end
 
   describe "error handling" do
     it "preserves exceptions from the block" do
       expect {
-        Backspin.use_record("exception_test") do
+        Backspin.run("exception_test") do
           raise "Something went wrong"
         end
       }.to raise_error("Something went wrong")

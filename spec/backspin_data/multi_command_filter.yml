@@ -1,0 +1,26 @@
+---
+first_recorded_at: '2025-05-01T12:00:00Z'
+format_version: '2.0'
+commands:
+- command_type: Open3::Capture3
+  args:
+  - echo
+  - "'Count:"
+  - 42'
+  stdout: 'Count: X
+
+    '
+  stderr: ''
+  status: 0
+  recorded_at: '2025-05-01T12:00:00Z'
+- command_type: Open3::Capture3
+  args:
+  - echo
+  - "'Total:"
+  - 100'
+  stdout: 'Total: X
+
+    '
+  stderr: ''
+  status: 0
+  recorded_at: '2025-05-01T12:00:00Z'

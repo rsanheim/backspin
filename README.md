@@ -24,72 +24,145 @@ And then run `bundle install`.
 
 ## Usage
 
-### Recording CLI interactions
+### Quick Start
+
+The simplest way to use Backspin is with the `run` method, which automatically records on the first execution and verifies on subsequent runs:
 
 ```ruby
-require "backspin" 
+require "backspin"
 
-# Record a command's output
-result = Backspin.call("echo_hello") do
-  stdout, stderr, status = Open3.capture3("echo hello")
-  # This will save the output to `spec/backspin_data/echo_hello.yaml`.
+# First run: records the output
+result = Backspin.run("my_command") do
+  Open3.capture3("echo hello world")
 end
 
+# Subsequent runs: verifies the output matches
+result = Backspin.run("my_command") do
+  Open3.capture3("echo hello world")
+end
+
+# Use run! to automatically fail tests on mismatch
+Backspin.run!("my_command") do
+  Open3.capture3("echo hello world")
+end
 ```
 
-### Verifying CLI output
+### Recording Modes
+
+Backspin supports different modes for controlling how commands are recorded and verified:
 
 ```ruby
-# Verify that a command produces the expected output
-result = Backspin.verify("echo_hello") do
+# Auto mode (default): Record on first run, verify on subsequent runs
+result = Backspin.run("my_command") do
   Open3.capture3("echo hello")
 end
 
+# Explicit record mode: Always record, overwriting existing recordings
+result = Backspin.run("echo_test", mode: :record) do
+  Open3.capture3("echo hello")
+end
+# This will save the output to `spec/backspin_data/echo_test.yml`.
+
+# Explicit verify mode: Always verify against existing recording
+result = Backspin.run("echo_test", mode: :verify) do
+  Open3.capture3("echo hello")
+end
 expect(result.verified?).to be true
+
+# Playback mode: Return recorded output without running the command
+result = Backspin.run("slow_command", mode: :playback) do
+  Open3.capture3("slow_command")  # Not executed - returns recorded output
+end
 ```
 
-### Using verify! for automatic test failures
+### Using run! for automatic test failures
+
+The `run!` method works exactly like `run` but automatically fails the test if verification fails:
 
 ```ruby
 # Automatically fail the test if output doesn't match
-Backspin.verify!("echo_hello") do
+Backspin.run!("echo_test") do
   Open3.capture3("echo hello")
 end
-```
-
-### Playback mode for fast tests
-
-```ruby
-# Return recorded output without running the command
-result = Backspin.verify("slow_command", mode: :playback) do
-  Open3.capture3("slow_command")  # Not executed - will playback from the record yaml (assuming it exists)
-end
+# Raises an error with detailed diff if verification fails
 ```
 
 ### Custom matchers
 
+For cases where exact matching isn't suitable, you can provide custom verification logic:
+
 ```ruby
 # Use custom logic to verify output
-Backspin.verify("version_check", 
-                matcher: ->(recorded, actual) {
-                  # Just check that both start with "ruby"
-                  recorded["stdout"].start_with?("ruby") && 
-                  actual["stdout"].start_with?("ruby")
-                }) do
+result = Backspin.run("version_check", 
+                     matcher: ->(recorded, actual) {
+                       # Just check that both start with "ruby"
+                       recorded["stdout"].start_with?("ruby") && 
+                       actual["stdout"].start_with?("ruby")
+                     }) do
   Open3.capture3("ruby --version")
 end
 ```
 
-### VCR-style use_record
+### Working with the Result Object
 
-_The plan is to make something like this the main entry point API for ease of use_
+The API returns a `RecordResult` object with helpful methods:
 
 ```ruby
-# Record on first run, replay on subsequent runs
-Backspin.use_record("my_command", record: :once) do
-  Open3.capture3("echo hello")
+result = Backspin.run("my_test") do
+  Open3.capture3("echo out; echo err >&2; exit 42")
 end
+
+# Check the mode
+result.recorded?  # true on first run
+result.verified?  # true/false on subsequent runs, nil when recording
+result.playback?  # true in playback mode
+
+# Access output (first command for single commands)
+result.stdout     # "out\n"
+result.stderr     # "err\n" 
+result.status     # 42
+result.success?   # false (non-zero exit)
+result.output     # The raw return value from the block
+
+# Debug information
+result.record_path  # Path to the YAML file
+result.error_message  # Human-readable error if verification failed
+result.diff  # Diff between expected and actual output
 ```
+
+### Multiple Commands
+
+Backspin automatically records and verifies all commands executed in a block:
+
+```ruby
+result = Backspin.run("multi_command_test") do
+  # All of these commands will be recorded
+  version, = Open3.capture3("ruby --version")
+  files, = Open3.capture3("ls -la")
+  system("echo 'Processing...'")  # Note: system doesn't capture output
+  data, stderr, = Open3.capture3("curl https://api.example.com/data")
+  
+  # Return whatever you need
+  { version: version.strip, file_count: files.lines.count, data: data }
+end
+
+# Access individual command results
+result.commands.size       # 4
+result.multiple_commands?  # true
+
+# For multiple commands, use these accessors
+result.all_stdout  # Array of stdout from each command
+result.all_stderr  # Array of stderr from each command
+result.all_status  # Array of exit statuses
+
+# Or access specific commands
+result.commands[0].stdout  # Ruby version output
+result.commands[1].stdout  # ls output
+result.commands[2].status  # system call exit status (stdout is empty)
+result.commands[3].stderr  # curl errors if any
+```
+
+When verifying multiple commands, Backspin ensures all commands match in the exact order they were recorded. If any command differs, you'll get a detailed error showing which commands failed.
 
 ### Credential Scrubbing
 
@@ -102,7 +175,7 @@ A tool like [trufflehog](https://github.com/trufflesecurity/trufflehog) or [gitl
 
 ```ruby
 # This will automatically scrub AWS keys, API tokens, passwords, etc.
-Backspin.call("aws_command") do
+Backspin.run("aws_command") do
   Open3.capture3("aws s3 ls")
 end
 

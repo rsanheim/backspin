@@ -1,7 +1,9 @@
 require "spec_helper"
 
 RSpec.describe "Backspin credential scrubbing" do
-  let(:backspin_path) { Pathname.new(File.join("tmp", "backspin")) }
+  around do |example|
+    with_tmp_dir_for_backspin(&example)
+  end
 
   describe "configuration" do
     it "has credential scrubbing enabled by default" do
@@ -33,7 +35,7 @@ RSpec.describe "Backspin credential scrubbing" do
 
   describe "scrubbing AWS credentials" do
     it "scrubs AWS access key IDs" do
-      result = Backspin.call("aws_keys") do
+      result = Backspin.run("aws_keys") do
         Open3.capture3("echo AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE")
       end
 
@@ -42,7 +44,7 @@ RSpec.describe "Backspin credential scrubbing" do
     end
 
     it "scrubs AWS secret keys" do
-      result = Backspin.call("aws_secret") do
+      result = Backspin.run("aws_secret") do
         Open3.capture3("echo aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
       end
 
@@ -53,7 +55,7 @@ RSpec.describe "Backspin credential scrubbing" do
 
   describe "scrubbing Google credentials" do
     it "scrubs Google API keys" do
-      result = Backspin.call("google_api_key") do
+      result = Backspin.run("google_api_key") do
         Open3.capture3("echo GOOGLE_API_KEY=AIzaFAKEGmWKa4JsXZ-HjGw7ISLn_3namBGFAKE")
       end
 
@@ -64,7 +66,7 @@ RSpec.describe "Backspin credential scrubbing" do
 
   describe "scrubbing generic credentials" do
     it "scrubs API keys" do
-      result = Backspin.call("api_key") do
+      result = Backspin.run("api_key") do
         Open3.capture3("echo api_key=abc123def456ghi789jkl012mno345pqr678")
       end
 
@@ -73,7 +75,7 @@ RSpec.describe "Backspin credential scrubbing" do
     end
 
     it "scrubs passwords" do
-      result = Backspin.call("password") do
+      result = Backspin.run("password") do
         Open3.capture3("echo 'database password: supersecretpassword123!'")
       end
 
@@ -84,7 +86,7 @@ RSpec.describe "Backspin credential scrubbing" do
 
   describe "scrubbing stderr" do
     it "scrubs credentials from stderr as well" do
-      result = Backspin.call("stderr_creds") do
+      result = Backspin.run("stderr_creds") do
         Open3.capture3("sh -c 'echo normal output && echo \"Error: Invalid API_KEY=sk-1234567890abcdef1234567890abcdef\" >&2 && exit 1'")
       end
 
@@ -106,7 +108,7 @@ RSpec.describe "Backspin credential scrubbing" do
     end
 
     it "does not scrub credentials" do
-      result = Backspin.call("no_scrub") do
+      result = Backspin.run("no_scrub") do
         Open3.capture3("echo AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE")
       end
 
@@ -117,7 +119,7 @@ RSpec.describe "Backspin credential scrubbing" do
 
   describe "private key detection" do
     it "scrubs private keys" do
-      result = Backspin.call("private_key") do
+      result = Backspin.run("private_key") do
         Open3.capture3("echo '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANB...'")
       end
 
@@ -128,7 +130,7 @@ RSpec.describe "Backspin credential scrubbing" do
 
   describe "scrubbing command arguments" do
     it "scrubs AWS credentials in command arguments" do
-      result = Backspin.call("args_aws_creds") do
+      result = Backspin.run("args_aws_creds") do
         Open3.capture3("echo", "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE")
       end
 
@@ -142,7 +144,7 @@ RSpec.describe "Backspin credential scrubbing" do
     end
 
     it "scrubs API keys in command arguments" do
-      result = Backspin.call("args_api_key") do
+      result = Backspin.run("args_api_key") do
         Open3.capture3("curl", "-H", "Authorization: Bearer sk-1234567890abcdef", "https://api.example.com")
       end
 
@@ -156,7 +158,7 @@ RSpec.describe "Backspin credential scrubbing" do
     end
 
     it "scrubs passwords in command arguments" do
-      result = Backspin.call("args_password") do
+      result = Backspin.run("args_password") do
         Open3.capture3("echo", "-psupersecretpassword123", "connecting to database")
       end
 
@@ -169,7 +171,7 @@ RSpec.describe "Backspin credential scrubbing" do
     end
 
     it "handles nested array arguments" do
-      result = Backspin.call("args_nested") do
+      result = Backspin.run("args_nested") do
         Open3.capture3("sh", "-c", "export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY && echo done")
       end
 
@@ -186,7 +188,7 @@ RSpec.describe "Backspin credential scrubbing" do
         config.scrub_credentials = false
       end
 
-      result = Backspin.call("args_no_scrub") do
+      result = Backspin.run("args_no_scrub") do
         Open3.capture3("echo", "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE")
       end
 
@@ -201,7 +203,7 @@ RSpec.describe "Backspin credential scrubbing" do
     end
 
     it "scrubs credentials from multiple commands" do
-      result = Backspin.call("multiple_commands_with_creds") do
+      result = Backspin.run("multiple_commands_with_creds") do
         Open3.capture3("echo", "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE")
         Open3.capture3("curl", "-H", "Authorization: Bearer sk-secret123456789", "https://api.example.com")
         Open3.capture3("echo", "password=mysupersecretpassword", "admin", "connection")
