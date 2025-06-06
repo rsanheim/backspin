@@ -2,7 +2,9 @@ require "spec_helper"
 
 RSpec.describe "Backspin verify! functionality" do
   around do |example|
-    with_tmp_dir_for_backspin(&example)
+    Timecop.freeze(static_time) do
+      with_tmp_dir_for_backspin(&example)
+    end
   end
 
   before do

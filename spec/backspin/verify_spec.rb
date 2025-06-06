@@ -1,6 +1,12 @@
 require "spec_helper"
 
 RSpec.describe "Backspin verify functionality" do
+  around do |example|
+    Timecop.freeze(static_time) do
+      example.run
+    end
+  end
+
   describe "basic verification" do
     before do
       # First, record a command
