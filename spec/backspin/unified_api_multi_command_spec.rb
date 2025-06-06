@@ -3,18 +3,9 @@
 require "spec_helper"
 
 RSpec.describe "Backspin.run with multiple commands" do
-  let(:record_dir) { Pathname.new("tmp/backspin_data") }
 
-  before do
-    Backspin.configure do |config|
-      config.backspin_dir = record_dir
-    end
-    FileUtils.rm_rf(record_dir)
-  end
-
-  after do
-    FileUtils.rm_rf(record_dir)
-    Backspin.reset_configuration!
+  around do |example|
+    with_tmp_dir_for_backspin(&example)
   end
 
   describe "recording multiple commands" do

@@ -1,16 +1,12 @@
 require "spec_helper"
 
 RSpec.describe Backspin::Record do
-  let(:record_path) { "tmp/backspin/test_record.yaml" }
+  around do |example|
+    with_tmp_dir_for_backspin(&example)
+  end
+
+  let(:record_path) { Backspin.configuration.backspin_dir.join("test_record.yaml") }
   let(:record) { described_class.new(record_path) }
-
-  before do
-    FileUtils.rm_rf("tmp/backspin")
-  end
-
-  after do
-    FileUtils.rm_rf("tmp/backspin")
-  end
 
   describe "#initialize" do
     it "creates a new record with the given path" do
@@ -188,8 +184,13 @@ RSpec.describe Backspin::Record do
     end
 
     it "clears commands if file doesn't exist" do
-      record.add_command(create_test_command("test"))
-      FileUtils.rm_rf(File.dirname(record_path))
+      record.add_command(create_test_command("test")).save
+      expect(record_path).to exist
+      expect(record.commands.size).to eq(1)
+
+      record_path.delete
+
+      expect(record_path).not_to exist
 
       record.reload
 

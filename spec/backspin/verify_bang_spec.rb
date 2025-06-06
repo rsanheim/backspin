@@ -1,10 +1,11 @@
 require "spec_helper"
 
 RSpec.describe "Backspin verify! functionality" do
-  let(:record_dir) { Pathname.new(File.join(Dir.pwd, "..")).join("tmp", "backspin") }
+  around do |example|
+    with_tmp_dir_for_backspin(&example)
+  end
 
   before do
-    # Record a command for testing
     Backspin.run("echo_verify_bang") do
       Open3.capture3("echo hello")
     end

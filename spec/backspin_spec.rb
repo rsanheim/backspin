@@ -29,8 +29,6 @@ RSpec.describe Backspin do
         "status" => 0,
         "recorded_at" => time.iso8601
       })
-
-      # last_output is removed in new API
     end
 
     it "raises ArgumentError when no record name is provided" do
@@ -57,7 +55,7 @@ RSpec.describe Backspin do
       }.to raise_error(ArgumentError, "record_name is required")
     end
 
-    it "records multiple commands to an array in the record" do
+    it "records multiple commands for single run / record" do
       time = Time.now
       Timecop.freeze(time)
 
@@ -107,8 +105,6 @@ RSpec.describe Backspin do
         "status" => 0,
         "recorded_at" => time.iso8601
       })
-
-      # last_output is removed in new API
     end
   end
 end

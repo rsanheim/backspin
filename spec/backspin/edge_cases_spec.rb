@@ -22,7 +22,6 @@ RSpec.describe "Backspin edge cases" do
       Open3.capture3("echo slashes")
     end
 
-    # Slashes should create subdirectories
     expect(result.record_path.to_s).to end_with("test/with/slashes.yaml")
   end
 end

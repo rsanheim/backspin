@@ -5,6 +5,16 @@ RSpec.describe "Backspin filtering support" do
     Backspin.reset_configuration!
   end
 
+  def static_time
+    Time.parse("2025-05-01T12:00:00Z")
+  end
+
+  around do |example|
+    Timecop.freeze(static_time) do
+      example.run
+    end
+  end
+
   describe "Backspin.run with filter in record mode" do
     it "applies filter to recorded output before saving" do
       # Filter that normalizes timestamps in the format YYYY-MM-DD HH:MM:SS
@@ -19,6 +29,7 @@ RSpec.describe "Backspin filtering support" do
       end
 
       # Verify the saved file has normalized timestamps
+      pp Backspin.configuration.backspin_dir
       record_path = Backspin.configuration.backspin_dir.join("timestamp_test.yaml")
       saved_data = YAML.load_file(record_path)
       expect(saved_data["commands"].first["stdout"]).to eq("Test run at TIMESTAMP\n")
@@ -219,10 +230,5 @@ RSpec.describe "Backspin filtering support" do
       # Should be uppercased AND have credentials scrubbed
       expect(saved_data["commands"].first["stdout"]).to eq("MY API KEY IS ********************\n")
     end
-  end
-
-  after do
-    # Clean up test recordings
-    FileUtils.rm_rf(Backspin.configuration.backspin_dir)
   end
 end

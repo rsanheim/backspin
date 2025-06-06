@@ -1,7 +1,9 @@
 require "spec_helper"
 
 RSpec.describe "Backspin credential scrubbing" do
-  let(:backspin_path) { Pathname.new(File.join("tmp", "backspin")) }
+  around do |example|
+    with_tmp_dir_for_backspin(&example) 
+  end
 
   describe "configuration" do
     it "has credential scrubbing enabled by default" do

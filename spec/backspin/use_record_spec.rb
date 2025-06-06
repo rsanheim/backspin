@@ -1,31 +1,19 @@
 require "spec_helper"
 
 RSpec.describe "Backspin.run" do
-  let(:record_dir) { Pathname.new("tmp/backspin_data") }
-
-  before do
-    # Use tmp for integration tests that modify files
-    Backspin.configure do |config|
-      config.backspin_dir = record_dir
-    end
-    FileUtils.rm_rf(record_dir)
-  end
-
-  after do
-    FileUtils.rm_rf(record_dir)
-    Backspin.reset_configuration!
+  around do |example|
+    with_tmp_dir_for_backspin(&example)
   end
 
   describe "VCR-style unified API" do
     it "records on first run, verifies on subsequent runs in auto mode" do
-      # First run - should record
       first_result = Backspin.run("unified_test") do
         Open3.capture3("echo hello from use_record")
       end
 
       expect(first_result.output).to eq(["hello from use_record\n", "", 0])
       expect(first_result.mode).to eq(:record)
-      expect(record_dir.join("unified_test.yaml")).to exist
+      expect(Backspin.configuration.backspin_dir.join("unified_test.yaml")).to exist
 
       # Second run - should verify (auto mode becomes verify when file exists)
       second_result = Backspin.run("unified_test") do
@@ -80,9 +68,6 @@ RSpec.describe "Backspin.run" do
     end
 
     it "supports record modes" do
-      # Clean up any existing file first
-      FileUtils.rm_f(record_dir.join("modes_test.yaml"))
-
       # Record initially
       Backspin.run("modes_test") do
         Open3.capture3("echo first")
@@ -111,9 +96,6 @@ RSpec.describe "Backspin.run" do
     end
 
     it "supports :none mode - never record" do
-      # Ensure record doesn't exist
-      FileUtils.rm_f(record_dir.join("none_mode_test.yaml"))
-
       expect {
         Backspin.run("none_mode_test", mode: :playback) do
           Open3.capture3("echo test")
