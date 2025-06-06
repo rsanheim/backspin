@@ -72,7 +72,9 @@ module Backspin
 
   class << self
     def configuration
-      @configuration ||= Configuration.new
+      return @configuration if @configuration
+
+      @configuration = Configuration.new
     end
 
     def configure
@@ -158,10 +160,8 @@ module Backspin
       recorder = Recorder.new
       recorder.record_calls(:capture3, :system)
 
-      # Execute the block and capture output
       output = yield
 
-      # Normalize status if it's a capture3 result
       if output.is_a?(Array) && output.size == 3
         stdout, stderr, status = output
         status_int = status.respond_to?(:exitstatus) ? status.exitstatus : status
