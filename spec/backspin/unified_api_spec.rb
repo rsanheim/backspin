@@ -16,9 +16,9 @@ RSpec.describe "Backspin.run unified API" do
 
         expect(result).to be_recorded
         expect(result).not_to be_verified
-        expect(result.stdout).to eq("hello unified\n")
-        expect(result.stderr).to eq("")
-        expect(result.status).to eq(0)
+        expect(result.all_stdout).to eq(["hello unified\n"])
+        expect(result.all_stderr).to eq([""])
+        expect(result.all_status).to eq([0])
         expect(result).to be_success
 
         # Verify file was created
@@ -38,7 +38,7 @@ RSpec.describe "Backspin.run unified API" do
 
         expect(result).not_to be_recorded
         expect(result).to be_verified
-        expect(result.stdout).to eq("first run\n")
+        expect(result.all_stdout).to eq(["first run\n"])
       end
 
       it "returns false for verified? when output doesn't match" do

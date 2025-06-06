@@ -1,6 +1,6 @@
 # Backspin   [![Gem Version](https://badge.fury.io/rb/backspin.svg)](https://badge.fury.io/rb/backspin) [![CircleCI](https://dl.circleci.com/status-badge/img/gh/rsanheim/backspin/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/rsanheim/backspin/tree/main)
 
-Backspin records and replays CLI interactions in Ruby for easy snapshot testing of command-line interfaces. Currently supports `Open3.capture3` and `system` and requires `rspec-mocks`.  More system calls and flexible test integration are welcome - PRs welcome!
+Backspin records and replays CLI interactions in Ruby for easy snapshot testing of command-line interfaces. Currently supports `Open3.capture3` and `system` and requires `rspec-mocks`.  More system calls and test integrations are welcome - send a PR!
 
 **NOTE:** Backspin should be considered alpha quality software while pre v1.0. It is in heavy development, and you can expect the API to change. It is being developed in conjunction with production CLI apps, so the API will be refined and improved as we get to 1.0.
 
@@ -43,8 +43,9 @@ end
 
 # Use run! to automatically fail tests on mismatch
 Backspin.run!("my_command") do
-  Open3.capture3("echo hello world")
+  Open3.capture3("echo hello mars")
 end
+# Raises an error because stdout will not match the recorded output
 ```
 
 ### Recording Modes
@@ -84,7 +85,7 @@ The `run!` method works exactly like `run` but automatically fails the test if v
 Backspin.run!("echo_test") do
   Open3.capture3("echo hello")
 end
-# Raises an error with detailed diff if verification fails
+# Raises an error with detailed diff if verification fails from recorded data in "echo_test.yml"
 ```
 
 ### Custom matchers
