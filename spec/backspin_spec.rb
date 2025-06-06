@@ -3,20 +3,24 @@ require "spec_helper"
 RSpec.describe Backspin do
   let(:backspin_path) { Backspin.configuration.backspin_dir }
 
-  context "record" do
+  around do |example|
+    Timecop.freeze(static_time) do
+      example.run
+    end
+  end
+
+  context "run" do
     it "records stdout, stderr, and status to a single yaml" do
-      time = static_time
-      result = nil
-      Timecop.freeze(static_time) do
-        result = Backspin.run("echo_hello", mode: :record) do
-          Open3.capture3("echo hello")
-        end
+      result = Backspin.run("echo_hello", mode: :record) do
+        Open3.capture3("echo hello")
       end
       expect(result.commands.size).to eq(1)
       expect(result.commands.first.method_class).to eq(Open3::Capture3)
       expect(result.commands.first.args).to eq(["echo", "hello"])
       expect(result.record_path.to_s).to end_with("echo_hello.yaml")
+
       expect(backspin_path.join("echo_hello.yaml")).to exist
+
       results = YAML.load_file(backspin_path.join("echo_hello.yaml"))
       expect(results).to be_a(Hash)
       expect(results["format_version"]).to eq("2.0")
@@ -29,38 +33,11 @@ RSpec.describe Backspin do
         "stdout" => "hello\n",
         "stderr" => "",
         "status" => 0,
-        "recorded_at" => time.iso8601
+        "recorded_at" => static_time.iso8601
       })
     end
 
-    it "raises ArgumentError when no record name is provided" do
-      expect {
-        Backspin.run do
-          Open3.capture3("echo hello")
-        end
-      }.to raise_error(ArgumentError, /wrong number of arguments/)
-    end
-
-    it "raises ArgumentError when record name is nil" do
-      expect {
-        Backspin.run(nil, mode: :record) do
-          Open3.capture3("echo hello")
-        end
-      }.to raise_error(ArgumentError, "record_name is required")
-    end
-
-    it "raises ArgumentError when record name is empty" do
-      expect {
-        Backspin.run("", mode: :record) do
-          Open3.capture3("echo hello")
-        end
-      }.to raise_error(ArgumentError, "record_name is required")
-    end
-
     it "records multiple commands for single run / record" do
-      time = Time.now
-      Timecop.freeze(time)
-
       result = Backspin.run("multi_command", mode: :record) do
         Open3.capture3("echo first")
         Open3.capture3("echo second")
@@ -87,7 +64,7 @@ RSpec.describe Backspin do
         "stdout" => "first\n",
         "stderr" => "",
         "status" => 0,
-        "recorded_at" => time.iso8601
+        "recorded_at" => static_time.iso8601
       })
 
       expect(record_data["commands"][1]).to include({
@@ -96,7 +73,7 @@ RSpec.describe Backspin do
         "stdout" => "second\n",
         "stderr" => "",
         "status" => 0,
-        "recorded_at" => time.iso8601
+        "recorded_at" => static_time.iso8601
       })
 
       expect(record_data["commands"][2]).to include({
@@ -105,8 +82,34 @@ RSpec.describe Backspin do
         "stdout" => "third\n",
         "stderr" => "",
         "status" => 0,
-        "recorded_at" => time.iso8601
+        "recorded_at" => static_time.iso8601
       })
     end
   end
+
+  context "run with invalid args"
+    it "raises ArgumentError when no record name is provided" do
+      expect {
+        Backspin.run do
+          Open3.capture3("echo hello")
+        end
+      }.to raise_error(ArgumentError, /wrong number of arguments/)
+    end
+
+    it "raises ArgumentError when record name is nil" do
+      expect {
+        Backspin.run(nil, mode: :record) do
+          Open3.capture3("echo hello")
+        end
+      }.to raise_error(ArgumentError, "record_name is required")
+    end
+
+    it "raises ArgumentError when record name is empty" do
+      expect {
+        Backspin.run("", mode: :record) do
+          Open3.capture3("echo hello")
+        end
+      }.to raise_error(ArgumentError, "record_name is required")
+    end
+
 end
