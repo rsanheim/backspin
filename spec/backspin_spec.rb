@@ -5,10 +5,12 @@ RSpec.describe Backspin do
 
   context "record" do
     it "records stdout, stderr, and status to a single yaml" do
-      time = Time.now
-      Timecop.freeze(time)
-      result = Backspin.run("echo_hello", mode: :record) do
-        Open3.capture3("echo hello")
+      time = static_time
+      result = nil
+      Timecop.freeze(static_time) do
+        result = Backspin.run("echo_hello", mode: :record) do
+          Open3.capture3("echo hello")
+        end
       end
       expect(result.commands.size).to eq(1)
       expect(result.commands.first.method_class).to eq(Open3::Capture3)
