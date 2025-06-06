@@ -15,10 +15,8 @@ module Backspin
     # @return [Boolean] true if the command output matches
     def verified?
       if matcher
-        # Use custom matcher if provided
         matcher.call(recorded_command.to_h, actual_result.to_h)
       else
-        # Default strict comparison
         recorded_command.result == actual_result
       end
     end
