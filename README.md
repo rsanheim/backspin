@@ -24,7 +24,7 @@ And then run `bundle install`.
 
 ## Usage
 
-### Quick Start - The Unified API
+### Quick Start
 
 The simplest way to use Backspin is with the `run` method, which automatically records on the first execution and verifies on subsequent runs:
 
@@ -47,68 +47,49 @@ Backspin.run!("my_command") do
 end
 ```
 
-### Recording CLI interactions
+### Recording Modes
+
+Backspin supports different modes for controlling how commands are recorded and verified:
 
 ```ruby
-# Explicitly record a command's output
+# Auto mode (default): Record on first run, verify on subsequent runs
+result = Backspin.run("my_command") do
+  Open3.capture3("echo hello")
+end
+
+# Explicit record mode: Always record, overwriting existing recordings
 result = Backspin.run("echo_test", mode: :record) do
   Open3.capture3("echo hello")
 end
+# This will save the output to `spec/backspin_data/echo_test.yaml`.
 
-# Or use the classic API
-result = Backspin.call("echo_hello") do
-  stdout, stderr, status = Open3.capture3("echo hello")
-  # This will save the output to `spec/backspin_data/echo_hello.yaml`.
-end
-```
-
-### Verifying CLI output
-
-```ruby
-# Explicitly verify against a recording
+# Explicit verify mode: Always verify against existing recording
 result = Backspin.run("echo_test", mode: :verify) do
   Open3.capture3("echo hello")
 end
-
 expect(result.verified?).to be true
 
-# Or use the classic API
-result = Backspin.verify("echo_hello") do
-  Open3.capture3("echo hello")
+# Playback mode: Return recorded output without running the command
+result = Backspin.run("slow_command", mode: :playback) do
+  Open3.capture3("slow_command")  # Not executed - returns recorded output
 end
-
-expect(result.verified?).to be true
 ```
 
-### Using verify! for automatic test failures
+### Using run! for automatic test failures
+
+The `run!` method works exactly like `run` but automatically fails the test if verification fails:
 
 ```ruby
 # Automatically fail the test if output doesn't match
 Backspin.run!("echo_test") do
   Open3.capture3("echo hello")
 end
-
-# Or with the classic API
-Backspin.verify!("echo_hello") do
-  Open3.capture3("echo hello")
-end
-```
-
-### Playback mode for fast tests
-
-```ruby
-# Return recorded output without running the command
-result = Backspin.run("slow_command", mode: :playback) do
-  Open3.capture3("slow_command")  # Not executed - returns recorded output
-end
-
-# Or with the classic API
-result = Backspin.verify("slow_command", mode: :playback) do
-  Open3.capture3("slow_command")
-end
+# Raises an error with detailed diff if verification fails
 ```
 
 ### Custom matchers
+
+For cases where exact matching isn't suitable, you can provide custom verification logic:
 
 ```ruby
 # Use custom logic to verify output
@@ -120,30 +101,11 @@ result = Backspin.run("version_check",
                      }) do
   Open3.capture3("ruby --version")
 end
-
-# Or with the classic API
-Backspin.verify("version_check", 
-                matcher: ->(recorded, actual) {
-                  # Just check that both start with "ruby"
-                  recorded["stdout"].start_with?("ruby") && 
-                  actual["stdout"].start_with?("ruby")
-                }) do
-  Open3.capture3("ruby --version")
-end
-```
-
-### VCR-style use_record
-
-```ruby
-# Record on first run, replay on subsequent runs
-Backspin.use_record("my_command", record: :once) do
-  Open3.capture3("echo hello")
-end
 ```
 
 ### Working with the Result Object
 
-The unified API returns a `UnifiedResult` object with helpful methods:
+The API returns a `RecordResult` object with helpful methods:
 
 ```ruby
 result = Backspin.run("my_test") do
@@ -213,7 +175,7 @@ A tool like [trufflehog](https://github.com/trufflesecurity/trufflehog) or [gitl
 
 ```ruby
 # This will automatically scrub AWS keys, API tokens, passwords, etc.
-Backspin.call("aws_command") do
+Backspin.run("aws_command") do
   Open3.capture3("aws s3 ls")
 end
 

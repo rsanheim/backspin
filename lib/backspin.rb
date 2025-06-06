@@ -82,9 +82,7 @@ module Backspin
     def reset_configuration!
       @configuration = Configuration.new
     end
-  end
 
-  class << self
     def scrub_text(text)
       return text unless configuration.scrub_credentials && text
 
@@ -306,86 +304,6 @@ module Backspin
         record_path: Pathname.new(record_path),
         commands: record.commands
       )
-    end
-
-    def replay_record(record_path, &block)
-      record = Record.load_or_create(record_path)
-      unless record.exists?
-        raise RecordNotFoundError, "Record not found: #{record_path}"
-      end
-
-      if record.empty?
-        raise RecordNotFoundError, "No commands found in record"
-      end
-
-      # Create recorder in replay mode
-      recorder = Recorder.new(mode: :replay, record: record)
-      recorder.setup_replay_stubs
-
-      block_return_value = yield
-
-      # Return stdout, stderr, status if the block returned capture3 results
-      # Otherwise return the block's return value
-      if block_return_value.is_a?(Array) && block_return_value.size == 3 &&
-          block_return_value[0].is_a?(String) && block_return_value[1].is_a?(String)
-        # Convert status to integer for consistency
-        stdout, stderr, status = block_return_value
-        status_int = status.respond_to?(:exitstatus) ? status.exitstatus : status
-        [stdout, stderr, status_int]
-      else
-        block_return_value
-      end
-    end
-
-    def record_and_save_record(record_path, filter: nil, &block)
-      # Create recorder to handle stubbing and command recording
-      recorder = Recorder.new
-      recorder.record_calls(:capture3, :system)
-
-      block_return_value = yield
-
-      # Save commands using new format
-      FileUtils.mkdir_p(File.dirname(record_path))
-      # Don't load existing data when creating new record
-      record = Record.new(record_path)
-      record.clear  # Clear any loaded data
-      recorder.commands.each { |cmd| record.add_command(cmd) }
-      record.save(filter: filter)
-
-      # Return appropriate value
-      if block_return_value.is_a?(Array) && block_return_value.size == 3
-        # Return stdout, stderr, status as integers
-        stdout, stderr, status = block_return_value
-        [stdout, stderr, status.respond_to?(:exitstatus) ? status.exitstatus : status]
-      else
-        block_return_value
-      end
-    end
-
-    def record_new_episode(record_path, filter: nil, &block)
-      # For new_episodes mode, we'd need to track which commands have been seen
-      # For now, simplified implementation that just appends
-      record = Record.load_or_create(record_path)
-
-      # Create recorder to handle stubbing and command recording
-      recorder = Recorder.new
-      recorder.record_calls(:capture3, :system)
-
-      result = yield
-
-      # Save all recordings (existing + new)
-      if recorder.commands.any?
-        recorder.commands.each { |cmd| record.add_command(cmd) }
-        record.save(filter: filter)
-      end
-
-      # Return appropriate value
-      if result.is_a?(Array) && result.size == 3
-        stdout, stderr, status = result
-        [stdout, stderr, status.respond_to?(:exitstatus) ? status.exitstatus : status]
-      else
-        result
-      end
     end
 
     def build_record_path(name)
