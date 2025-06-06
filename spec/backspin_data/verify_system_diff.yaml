@@ -1,5 +1,5 @@
 ---
-first_recorded_at: '2025-06-06T00:33:54-05:00'
+first_recorded_at: '2025-05-01T12:00:00Z'
 format_version: '2.0'
 commands:
 - command_type: Kernel::System
@@ -8,4 +8,4 @@ commands:
   stdout: ''
   stderr: ''
   status: 0
-  recorded_at: '2025-06-06T00:33:54-05:00'
+  recorded_at: '2025-05-01T12:00:00Z'
