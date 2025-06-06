@@ -1,6 +1,12 @@
 require "spec_helper"
 
 RSpec.describe "Backspin system() support" do
+  around do |example|
+    Timecop.freeze(static_time) do
+      example.run
+    end
+  end
+
   describe "recording system calls" do
     it "records a simple system call" do
       result = Backspin.run("system_echo") do
@@ -29,7 +35,7 @@ RSpec.describe "Backspin system() support" do
     end
 
     it "records multiple system calls" do
-      result = Backspin.run("multi_system") do
+      result = Backspin.run("multi_system", mode: :record) do
         system("echo first")
         system("echo second")
       end
