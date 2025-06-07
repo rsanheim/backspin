@@ -105,6 +105,7 @@ module Backspin
     # @option options [Symbol] :mode (:auto) Recording mode - :auto, :record, :verify, :playback
     # @option options [Proc] :filter Custom filter for recorded data
     # @option options [Proc] :matcher Custom matcher for verification
+    # @option options [Array] :match_on Field-specific matchers - format: [:field, matcher] or [[:field1, matcher1], [:field2, matcher2]]
     # @return [RecordResult] Result object with output and status
     def run(record_name, options = {}, &block)
       raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
@@ -224,7 +225,8 @@ module Backspin
         command_diffs << CommandDiff.new(
           recorded_command: recorded_command,
           actual_result: actual_result,
-          matcher: options[:matcher]
+          matcher: options[:matcher],
+          match_on: options[:match_on]
         )
 
         command_index += 1
@@ -256,7 +258,8 @@ module Backspin
         command_diffs << CommandDiff.new(
           recorded_command: recorded_command,
           actual_result: actual_result,
-          matcher: options[:matcher]
+          matcher: options[:matcher],
+          match_on: options[:match_on]
         )
 
         command_index += 1

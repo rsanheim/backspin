@@ -1,0 +1,23 @@
+---
+first_recorded_at: '2025-05-01T12:00:00Z'
+format_version: '2.0'
+commands:
+- command_type: Open3::Capture3
+  args:
+  - sh
+  - "-c"
+  - "'echo"
+  - output;
+  - echo
+  - error
+  - ">&2;"
+  - exit
+  - 1'
+  stdout: 'output
+
+    '
+  stderr: 'error
+
+    '
+  status: 1
+  recorded_at: '2025-05-01T12:00:00Z'

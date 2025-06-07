@@ -1,0 +1,17 @@
+---
+first_recorded_at: '2025-05-01T12:00:00Z'
+format_version: '2.0'
+commands:
+- command_type: Open3::Capture3
+  args:
+  - echo
+  - "'Current"
+  - 'time:'
+  - '2025-01-06'
+  - 10:00:00'
+  stdout: 'Current time: 2025-01-06 10:00:00
+
+    '
+  stderr: ''
+  status: 0
+  recorded_at: '2025-05-01T12:00:00Z'
