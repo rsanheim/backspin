@@ -96,9 +96,18 @@ RSpec.describe "Backspin match_on functionality" do
           [:stdout, ->(recorded, actual) { recorded == actual }],  # This will pass
           [:stderr, ->(recorded, actual) { false }]  # This will fail
         ]) do
-        Open3.capture3("sh -c 'echo good; echo bad >&2'")
+        Open3.capture3("sh -c 'echo good; echo good >&2'")
       end
 
+      pp result
+      pp result.error_message
+      pp result.all_stderr
+      diff = result.command_diffs.first
+      pp diff.diff
+      pp diff.recorded_command.class
+      pp diff.actual_result.class
+      pp diff.recorded_command.stderr
+      pp diff.actual_result.stderr
       expect(result.verified?).to be false
     end
   end

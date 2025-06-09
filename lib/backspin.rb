@@ -111,12 +111,12 @@ module Backspin
       raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
       raise ArgumentError, "block is required" unless block_given?
 
-      record_path = build_record_path(record_name)
+      record_path = Record.build_record_path(record_name)
       mode = determine_mode(options[:mode], record_path)
 
       case mode
       when :record
-        perform_recording(record_name, record_path, options, &block)
+        perform_recording(record_name, options, mode: mode, &block)
       when :verify
         perform_verification(record_name, record_path, options, &block)
       when :playback
@@ -157,36 +157,19 @@ module Backspin
       File.exist?(record_path) ? :verify : :record
     end
 
-    def perform_recording(_record_name, record_path, options)
-      recorder = Recorder.new
-      recorder.record_calls(:capture3, :system)
+    def perform_recording(record_name, options, mode: nil, &block)
+      record = Record.create(record_name)
+      recorder = Recorder.new(record: record, options: options, mode: mode)
+      recorder.setup_recording_stubs(:capture3, :system)
 
-      output = yield
-
-      if output.is_a?(Array) && output.size == 3
-        stdout, stderr, status = output
-        status_int = status.respond_to?(:exitstatus) ? status.exitstatus : status
-        output = [stdout, stderr, status_int]
-      end
-
-      # Save the recording
-      FileUtils.mkdir_p(File.dirname(record_path))
-      record = Record.new(record_path)
-      record.clear
-      recorder.commands.each { |cmd| record.add_command(cmd) }
-      record.save(filter: options[:filter])
-
-      # Return result
-      RecordResult.new(
-        output: output,
-        mode: :record,
-        record_path: Pathname.new(record_path),
-        commands: recorder.commands
-      )
+      recorder.perform_recording(&block)
     end
 
+    # TODO: refactor to push behavior into recorder (similiar to perform_recording)
+    # TODO: remove record_path arg
+    # TODO: continue with other perform_ methods
     def perform_verification(_record_name, record_path, options)
-      record = Record.load_or_create(record_path)
+      record = Record.load_or_create!(record_path)
 
       raise RecordNotFoundError, "Record not found: #{record_path}" unless record.exists?
       raise RecordNotFoundError, "No commands found in record" if record.empty?
@@ -309,11 +292,5 @@ module Backspin
       )
     end
 
-    def build_record_path(name)
-      backspin_dir = configuration.backspin_dir
-      backspin_dir.mkpath
-
-      File.join(backspin_dir, "#{name}.yml")
-    end
   end
 end

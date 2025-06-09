@@ -35,13 +35,11 @@ module Backspin
     def ==(other)
       return false unless other.is_a?(CommandResult)
 
-      stdout == other.stdout &&
-        stderr == other.stderr &&
-        status == other.status
+      stdout == other.stdout && stderr == other.stderr && status == other.status
     end
 
     def inspect
-      "#<Backspin::CommandResult status=#{status} stdout=#{stdout.inspect.truncate(50)} stderr=#{stderr.inspect.truncate(50)}>"
+      "#<Backspin::CommandResult status=#{status} stdout=#{stdout} stderr=#{stderr}>"
     end
 
     private

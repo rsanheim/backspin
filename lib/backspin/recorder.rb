@@ -8,16 +8,17 @@ module Backspin
     include RSpec::Mocks::ExampleMethods
     SUPPORTED_COMMAND_TYPES = [:capture3, :system]
 
-    attr_reader :commands, :verification_data, :mode, :record
+    attr_reader :commands, :verification_data, :mode, :record, :options
 
-    def initialize(mode: :record, record: nil)
+    def initialize(mode: :record, record: nil, options: {})
       @mode = mode
       @record = record
+      @options = options
       @commands = []
       @verification_data = {}
     end
 
-    def record_calls(*command_types)
+    def setup_recording_stubs(*command_types)
       command_types = SUPPORTED_COMMAND_TYPES if command_types.empty?
 
       command_types.each do |command_type|
@@ -34,6 +35,13 @@ module Backspin
       else
         raise ArgumentError, "Unsupported command type: #{command_type} - currently supported types: #{SUPPORTED_COMMAND_TYPES.join(", ")}"
       end
+    end
+
+    # Records registered commands, adds them to the record, saves the record, and returns the overall RecordResult
+    def perform_recording
+      result = yield
+      record.save(filter: options[:filter])
+      RecordResult.new( output: result, mode: :record, record_path: record.path, commands: record.commands)
     end
 
     # Setup stubs for playback mode - just return recorded values
@@ -135,7 +143,7 @@ module Backspin
           status: status.exitstatus,
           recorded_at: Time.now.iso8601
         )
-        @commands << command
+        record.add_command(command)
 
         [stdout, stderr, status]
       end
@@ -165,7 +173,7 @@ module Backspin
           status: status,
           recorded_at: Time.now.iso8601
         )
-        @commands << command
+        record.add_command(command)
 
         result
       end

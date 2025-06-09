@@ -7,12 +7,37 @@ module Backspin
     FORMAT_VERSION = "2.0"
     attr_reader :path, :commands, :first_recorded_at
 
+    def self.load_or_create(path)
+      record = new(path)
+      record.load_from_file if File.exist?(path)
+      record
+    end
+
+    def self.load_or_create!(path)
+      raise Backspin::RecordNotFoundError unless File.exist?(path)
+      record = new(path)
+      record.load_from_file if File.exist?(path)
+      record
+    end
+
+    def self.build_record_path(name)
+      backspin_dir = Backspin.configuration.backspin_dir
+      backspin_dir.mkpath
+
+      File.join(backspin_dir, "#{name}.yml")
+    end
+
+    def self.create(name)
+      path = build_record_path(name)
+      new(path)
+    end
+
     def initialize(path)
       @path = path
       @commands = []
       @first_recorded_at = nil
       @playback_index = 0
-      load_from_file if File.exist?(@path)
+      # load_from_file if File.exist?(@path)
     end
 
     def add_command(command)
@@ -65,11 +90,8 @@ module Backspin
       @playback_index = 0
     end
 
-    def self.load_or_create(path)
-      new(path)
-    end
 
-    private
+    # private
 
     def load_from_file
       data = YAML.load_file(@path.to_s)

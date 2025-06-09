@@ -10,11 +10,16 @@ RSpec.describe "Backspin.run unified API" do
   describe "Backspin.run" do
     context "basic usage" do
       it "records on first run when record doesn't exist" do
+        expect(Backspin.configuration.backspin_dir.join("unified_basic.yml")).not_to exist
+
         result = Backspin.run("unified_basic") do
           Open3.capture3("echo hello unified")
         end
 
         expect(result).to be_recorded
+        expect(result.class).to eq(Backspin::RecordResult)
+        expect(result.commands.first).to_not be_nil
+
         expect(result).not_to be_verified
         expect(result.all_stdout).to eq(["hello unified\n"])
         expect(result.all_stderr).to eq([""])
@@ -250,7 +255,8 @@ RSpec.describe "Backspin.run unified API" do
       # Verify that verified is nil but not included in the hash
       expect(result.verified?).to be_nil
 
-      expect(result.inspect).to match(/RecordResult mode=record/)
+      expect(result.inspect).to include("Backspin::RecordResult")
+      expect(result.inspect).to include("@mode=:record")
     end
   end
 end

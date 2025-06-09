@@ -146,8 +146,8 @@ module Backspin
       hash
     end
 
-    def inspect
-      "#<Backspin::RecordResult mode=#{mode} verified=#{verified?.inspect} status=#{status}>"
-    end
+    # def inspect
+    #   "#<Backspin::RecordResult mode=#{mode} verified=#{verified?.inspect} status=#{status}>"
+    # end
   end
 end
