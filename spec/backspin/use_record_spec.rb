@@ -108,6 +108,7 @@ RSpec.describe "Backspin.run" do
       # Keeping the test as a placeholder to document the removed functionality
     end
 
+    # TODO: remove this behavior and the spec?
     it "returns stdout, stderr, and status like capture3" do
       result = Backspin.run("full_output_test") do
         Open3.capture3("sh -c 'echo stdout; echo stderr >&2; exit 42'")
