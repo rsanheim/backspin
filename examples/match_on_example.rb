@@ -94,7 +94,7 @@ result = Backspin.run("mixed_matching",
     # Version and Status must match, Build can differ
     recorded_lines = recorded.lines
     actual_lines = actual.lines
-    
+
     recorded_lines[0] == actual_lines[0] &&  # Version line must match
     recorded_lines[1].start_with?("Build:") && actual_lines[1].start_with?("Build:") &&  # Build line format
     recorded_lines[2] == actual_lines[2]  # Status line must match

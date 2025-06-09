@@ -18,7 +18,7 @@ RSpec.describe "Backspin match_on functionality" do
       result = Backspin.run("match_on_single",
         match_on: [:stdout, ->(recorded, actual) {
           # Match if both have a timestamp format
-          recorded.match?(/Current time: \d{4}-\d{2}-\d{2}/) && 
+          recorded.match?(/Current time: \d{4}-\d{2}-\d{2}/) &&
           actual.match?(/Current time: \d{4}-\d{2}-\d{2}/)
         }]) do
         Open3.capture3("echo 'Current time: 2025-01-06 15:30:45'")
