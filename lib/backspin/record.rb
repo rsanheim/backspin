@@ -90,7 +90,6 @@ module Backspin
       @playback_index = 0
     end
 
-
     # private
 
     def load_from_file

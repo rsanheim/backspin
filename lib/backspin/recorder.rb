@@ -41,7 +41,7 @@ module Backspin
     def perform_recording
       result = yield
       record.save(filter: options[:filter])
-      RecordResult.new( output: result, mode: :record, record_path: record.path, commands: record.commands)
+      RecordResult.new(output: result, mode: :record, record_path: record.path, commands: record.commands)
     end
 
     # Setup stubs for playback mode - just return recorded values
