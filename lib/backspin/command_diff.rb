@@ -53,8 +53,8 @@ module Backspin
     private
 
     def failure_reason
+      reasons = []
       if match_on
-        reasons = []
         recorded_hash = recorded_command.to_h
         actual_hash = actual_result.to_h
 
@@ -73,14 +73,12 @@ module Backspin
             end
           end
         end
-        reasons.join(", ")
       else
-        reasons = []
         reasons << "stdout differs" if recorded_command.stdout != actual_result.stdout
         reasons << "stderr differs" if recorded_command.stderr != actual_result.stderr
         reasons << "exit status differs" if recorded_command.status != actual_result.status
-        reasons.join(", ")
       end
+      reasons.join(", ")
     end
 
     def stdout_diff

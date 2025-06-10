@@ -12,11 +12,7 @@ module Backspin
       @recorded_at = recorded_at
 
       # Accept either a CommandResult or individual stdout/stderr/status
-      @result = result || CommandResult.new(
-        stdout: stdout || "",
-        stderr: stderr || "",
-        status: status || 0
-      )
+      @result = result || CommandResult.new(stdout: stdout || "", stderr: stderr || "", status: status || 0)
     end
 
     def stdout

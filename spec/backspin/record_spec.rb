@@ -18,7 +18,6 @@ RSpec.describe Backspin::Record do
     end
 
     it "loads existing commands if file exists" do
-      # Create a record file with new format
       FileUtils.mkdir_p(File.dirname(record_path))
       File.write(record_path, {
         "format_version" => "2.0",
@@ -28,7 +27,7 @@ RSpec.describe Backspin::Record do
         ]
       }.to_yaml)
 
-      loaded_record = described_class.new(record_path)
+      loaded_record = described_class.load_from_file(record_path)
       expect(loaded_record.commands.size).to eq(1)
       expect(loaded_record.commands.first).to be_a(Backspin::Command)
       expect(loaded_record.commands.first.stdout).to eq("hello\n")
@@ -40,7 +39,7 @@ RSpec.describe Backspin::Record do
       File.write(record_path, "not an array")
 
       expect {
-        described_class.new(record_path)
+        described_class.load_from_file(record_path)
       }.to raise_error(Backspin::RecordFormatError, /Invalid record format/)
     end
   end
@@ -100,7 +99,6 @@ RSpec.describe Backspin::Record do
     end
 
     it "overwrites existing file" do
-      # Create initial file with new format
       FileUtils.mkdir_p(File.dirname(record_path))
       File.write(record_path, {
         "format_version" => "2.0",
@@ -108,12 +106,8 @@ RSpec.describe Backspin::Record do
         "commands" => [{"command_type" => "Open3::Capture3", "args" => ["echo", "old"], "stdout" => "old\n", "stderr" => "", "status" => 0, "recorded_at" => Time.now.iso8601}]
       }.to_yaml)
 
-      # Create a new record instance that won't load the existing data
       new_record = described_class.new(record_path)
-      expect(new_record.size).to eq(1)  # It loaded the existing data
 
-      # Clear and add new data
-      new_record.clear
       new_record.add_command(create_test_command("new"))
       new_record.save
 

@@ -13,10 +13,10 @@ module Backspin
       record
     end
 
-    def self.load_or_create!(path)
+    def self.load_from_file(path)
       raise Backspin::RecordNotFoundError unless File.exist?(path)
       record = new(path)
-      record.load_from_file if File.exist?(path)
+      record.load_from_file
       record
     end
 
@@ -37,7 +37,6 @@ module Backspin
       @commands = []
       @first_recorded_at = nil
       @playback_index = 0
-      # load_from_file if File.exist?(@path)
     end
 
     def add_command(command)
