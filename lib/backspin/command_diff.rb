@@ -4,23 +4,26 @@ module Backspin
   # Represents the difference between a recorded command and actual execution
   # Handles verification and diff generation for a single command
   class CommandDiff
-    attr_reader :recorded_command, :actual_result, :matcher, :match_on
+    attr_reader :recorded_command, :actual_result, :matcher
 
-    def initialize(recorded_command:, actual_result:, matcher: nil, match_on: nil)
+    def initialize(recorded_command:, actual_result:, matcher: nil)
       @recorded_command = recorded_command
       @actual_result = actual_result
-      @matcher = matcher
-      @match_on = normalize_match_on(match_on)
+      @matcher = normalize_matcher(matcher)
     end
 
     # @return [Boolean] true if the command output matches
     def verified?
-      if matcher
-        matcher.call(recorded_command.to_h, actual_result.to_h)
-      elsif match_on
-        verify_with_match_on
-      else
+      if matcher.nil?
         recorded_command.result == actual_result
+      elsif matcher.is_a?(Proc)
+        # Full command matcher
+        matcher.call(recorded_command.to_h, actual_result.to_h)
+      elsif matcher.is_a?(Hash)
+        # Field-specific matchers (and optionally :all)
+        verify_with_hash_matcher
+      else
+        raise ArgumentError, "Invalid matcher type: #{matcher.class}"
       end
     end
 
@@ -52,32 +55,75 @@ module Backspin
 
     private
 
+    def normalize_matcher(matcher)
+      return nil if matcher.nil?
+      return matcher if matcher.is_a?(Proc)
+
+      raise ArgumentError, "Matcher must be a Proc or Hash, got #{matcher.class}" unless matcher.is_a?(Hash)
+
+      # Validate hash keys and values
+      matcher.each do |key, value|
+        unless %i[all stdout stderr status].include?(key)
+          raise ArgumentError, "Invalid matcher key: #{key}. Must be one of: :all, :stdout, :stderr, :status"
+        end
+        raise ArgumentError, "Matcher for #{key} must be callable (Proc/Lambda)" unless value.respond_to?(:call)
+      end
+      matcher
+    end
+
+    def verify_with_hash_matcher
+      recorded_hash = recorded_command.to_h
+      actual_hash = actual_result.to_h
+
+      # First check :all matcher if present
+      return false if matcher[:all] && !matcher[:all].call(recorded_hash, actual_hash)
+
+      # Then check each field
+      %w[stdout stderr status].all? do |field|
+        field_sym = field.to_sym
+        if matcher[field_sym]
+          # Use field-specific matcher
+          matcher[field_sym].call(recorded_hash[field], actual_hash[field])
+        elsif !matcher[:all]
+          # Use exact equality only if no :all matcher was specified
+          recorded_hash[field] == actual_hash[field]
+        else
+          # If :all matcher exists and passed, we don't need to check individual fields
+          true
+        end
+      end
+    end
+
     def failure_reason
       reasons = []
-      if match_on
-        recorded_hash = recorded_command.to_h
-        actual_hash = actual_result.to_h
 
-        %w[stdout stderr status].each do |field|
-          field_sym = field.to_sym
-          custom_matcher = match_on.find { |f, _| f == field_sym }
-
-          if custom_matcher
-            _, matcher_proc = custom_matcher
-            unless matcher_proc.call(recorded_hash[field], actual_hash[field])
-              reasons << "#{field} custom matcher failed"
-            end
-          else
-            unless recorded_hash[field] == actual_hash[field]
-              reasons << "#{field} differs"
-            end
-          end
-        end
-      else
+      if matcher.nil?
         reasons << "stdout differs" if recorded_command.stdout != actual_result.stdout
         reasons << "stderr differs" if recorded_command.stderr != actual_result.stderr
         reasons << "exit status differs" if recorded_command.status != actual_result.status
+      elsif matcher.is_a?(Hash)
+        recorded_hash = recorded_command.to_h
+        actual_hash = actual_result.to_h
+
+        # Check :all matcher first
+        reasons << "full matcher failed" if matcher[:all] && !matcher[:all].call(recorded_hash, actual_hash)
+
+        # Check field-specific matchers
+        %w[stdout stderr status].each do |field|
+          field_sym = field.to_sym
+          if matcher[field_sym]
+            unless matcher[field_sym].call(recorded_hash[field], actual_hash[field])
+              reasons << "#{field} custom matcher failed"
+            end
+          elsif !matcher[:all] && recorded_hash[field] != actual_hash[field]
+            reasons << "#{field} differs"
+          end
+        end
+      else
+        # Proc matcher
+        reasons << "custom matcher failed"
       end
+
       reasons.join(", ")
     end
 
@@ -107,52 +153,6 @@ module Backspin
       end
 
       diff_lines.join("\n")
-    end
-
-    def normalize_match_on(match_on)
-      return nil if match_on.nil?
-
-      raise ArgumentError, "match_on must be an array" unless match_on.is_a?(Array)
-
-      # Handle single field case: [:field, matcher]
-      if match_on.length == 2 && match_on[0].is_a?(Symbol) && match_on[1].respond_to?(:call)
-        [[match_on[0], match_on[1]]]
-      else
-        # Handle multiple fields case: [[:field1, matcher1], [:field2, matcher2]]
-        match_on.map do |entry|
-          unless entry.is_a?(Array) && entry.length == 2 && entry[0].is_a?(Symbol) && entry[1].respond_to?(:call)
-            raise ArgumentError, "Each match_on entry must be [field_name, matcher_proc]"
-          end
-          entry
-        end
-      end
-    end
-
-    def verify_with_match_on
-      recorded_hash = recorded_command.to_h
-      actual_hash = actual_result.to_h
-
-      # Validate field names
-      match_on.each do |field_name, _|
-        unless %i[stdout stderr status].include?(field_name)
-          raise ArgumentError, "Invalid field name: #{field_name}. Must be one of: stdout, stderr, status"
-        end
-      end
-
-      # Check each field
-      %w[stdout stderr status].all? do |field|
-        field_sym = field.to_sym
-        custom_matcher = match_on.find { |f, _| f == field_sym }
-
-        if custom_matcher
-          # Use custom matcher for this field
-          _, matcher_proc = custom_matcher
-          matcher_proc.call(recorded_hash[field], actual_hash[field])
-        else
-          # Use exact equality for non-matched fields
-          recorded_hash[field] == actual_hash[field]
-        end
-      end
     end
   end
 end

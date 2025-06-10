@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "open3"
 require "ostruct"
 require "rspec/mocks"
@@ -8,7 +10,7 @@ module Backspin
   # Handles stubbing and recording of command executions
   class Recorder
     include RSpec::Mocks::ExampleMethods
-    SUPPORTED_COMMAND_TYPES = [:capture3, :system]
+    SUPPORTED_COMMAND_TYPES = %i[capture3 system].freeze
 
     attr_reader :commands, :verification_data, :mode, :record, :options
 
@@ -37,7 +39,8 @@ module Backspin
       when :capture3
         setup_capture3_call_stub
       else
-        raise ArgumentError, "Unsupported command type: #{command_type} - currently supported types: #{SUPPORTED_COMMAND_TYPES.join(", ")}"
+        raise ArgumentError,
+          "Unsupported command type: #{command_type} - currently supported types: #{SUPPORTED_COMMAND_TYPES.join(", ")}"
       end
     end
 
@@ -71,7 +74,7 @@ module Backspin
 
         stdout, stderr, status = original_method.call(*args)
 
-        # TODO should we store the actual commands as well to make it easier to diff / compare / etc?
+        # TODO: should we store the actual commands as well to make it easier to diff / compare / etc?
         actual_command = Command.new(
           method_class: Open3::Capture3,
           args: args,
@@ -83,8 +86,7 @@ module Backspin
         @command_diffs << CommandDiff.new(
           recorded_command: recorded_command,
           actual_result: actual_command.result,
-          matcher: options[:matcher],
-          match_on: options[:match_on]
+          matcher: options[:matcher]
         )
 
         @command_index += 1
@@ -115,8 +117,7 @@ module Backspin
         @command_diffs << CommandDiff.new(
           recorded_command: recorded_command,
           actual_result: actual_result,
-          matcher: options[:matcher],
-          match_on: options[:match_on]
+          matcher: options[:matcher]
         )
 
         @command_index += 1
@@ -174,7 +175,7 @@ module Backspin
     private
 
     def setup_capture3_replay_stub
-      allow(Open3).to receive(:capture3) do |*args|
+      allow(Open3).to receive(:capture3) do |*_args|
         command = @record.next_command
 
         # Make sure this is a capture3 command
@@ -193,14 +194,14 @@ module Backspin
     end
 
     def setup_system_replay_stub
-      allow_any_instance_of(Object).to receive(:system) do |receiver, *args|
+      allow_any_instance_of(Object).to receive(:system) do |_receiver, *_args|
         command = @record.next_command
 
         unless command.method_class == ::Kernel::System
           raise RecordNotFoundError, "Expected Kernel::System command but got #{command.method_class.name}"
         end
 
-        command.status == 0
+        command.status.zero?
       rescue NoMoreRecordingsError => e
         raise RecordNotFoundError, e.message
       end
@@ -243,7 +244,8 @@ module Backspin
           args
         end
 
-        stdout, stderr = "", ""
+        stdout = ""
+        stderr = ""
         status = result ? 0 : 1
 
         command = Command.new(

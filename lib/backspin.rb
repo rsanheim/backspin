@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "yaml"
 require "fileutils"
 require "open3"
@@ -50,22 +52,22 @@ module Backspin
     def default_credential_patterns
       [
         # AWS credentials
-        /AKIA[0-9A-Z]{16}/,                                    # AWS Access Key ID
-        /aws_secret_access_key\s*[:=]\s*["']?([A-Za-z0-9\/+=]{40})["']?/i,  # AWS Secret Key
-        /aws_session_token\s*[:=]\s*["']?([A-Za-z0-9\/+=]+)["']?/i,         # AWS Session Token
+        /AKIA[0-9A-Z]{16}/, # AWS Access Key ID
+        %r{aws_secret_access_key\s*[:=]\s*["']?([A-Za-z0-9/+=]{40})["']?}i,  # AWS Secret Key
+        %r{aws_session_token\s*[:=]\s*["']?([A-Za-z0-9/+=]+)["']?}i,         # AWS Session Token
 
         # Google Cloud credentials
-        /AIza[0-9A-Za-z\-_]{35}/,                              # Google API Key
+        /AIza[0-9A-Za-z\-_]{35}/, # Google API Key
         /[0-9]+-[0-9A-Za-z_]{32}\.apps\.googleusercontent\.com/, # Google OAuth2 client ID
-        /-----BEGIN (RSA )?PRIVATE KEY-----/,                  # Private keys
+        /-----BEGIN (RSA )?PRIVATE KEY-----/, # Private keys
 
         # Generic patterns
-        /api[_-]?key\s*[:=]\s*["']?([A-Za-z0-9\-_]{20,})["']?/i,  # Generic API keys
+        /api[_-]?key\s*[:=]\s*["']?([A-Za-z0-9\-_]{20,})["']?/i, # Generic API keys
         /auth[_-]?token\s*[:=]\s*["']?([A-Za-z0-9\-_]{20,})["']?/i, # Auth tokens
         /Bearer\s+([A-Za-z0-9\-_]+)/,                               # Bearer tokens
-        /password\s*[:=]\s*["']?([^"'\s]{8,})["']?/i,             # Passwords
-        /-p([^"'\s]{8,})/,                                          # MySQL-style password args
-        /secret\s*[:=]\s*["']?([A-Za-z0-9\-_]{20,})["']?/i       # Generic secrets
+        /password\s*[:=]\s*["']?([^"'\s]{8,})["']?/i, # Passwords
+        /-p([^"'\s]{8,})/, # MySQL-style password args
+        /secret\s*[:=]\s*["']?([A-Za-z0-9\-_]{20,})["']?/i # Generic secrets
       ]
     end
   end
@@ -104,8 +106,10 @@ module Backspin
     # @param options [Hash] Options for recording/verification
     # @option options [Symbol] :mode (:auto) Recording mode - :auto, :record, :verify, :playback
     # @option options [Proc] :filter Custom filter for recorded data
-    # @option options [Proc] :matcher Custom matcher for verification
-    # @option options [Array] :match_on Field-specific matchers - format: [:field, matcher] or [[:field1, matcher1], [:field2, matcher2]]
+    # @option options [Proc, Hash] :matcher Custom matcher for verification
+    #   - Proc: ->(recorded, actual) { ... } for full command matching
+    #   - Hash: { stdout: ->(recorded, actual) { ... }, stderr: ->(recorded, actual) { ... } } for field-specific matching
+    #   - Hash with :all key: { all: ->(recorded, actual) { ... }, stdout: ->(recorded, actual) { ... } } for combined matching
     # @return [RecordResult] Result object with output and status
     def run(record_name, options = {}, &block)
       raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Backspin
   class RecordFormatError < StandardError; end
 
@@ -15,6 +17,7 @@ module Backspin
 
     def self.load_from_file(path)
       raise Backspin::RecordNotFoundError unless File.exist?(path)
+
       record = new(path)
       record.load_from_file
       record
@@ -59,7 +62,7 @@ module Backspin
       @commands = []
       @playback_index = 0
       load_from_file if File.exist?(@path)
-      @playback_index = 0  # Reset again after loading to ensure it's at 0
+      @playback_index = 0 # Reset again after loading to ensure it's at 0
     end
 
     def exists?
@@ -75,9 +78,7 @@ module Backspin
     end
 
     def next_command
-      if @playback_index >= @commands.size
-        raise NoMoreRecordingsError, "No more recordings available for replay"
-      end
+      raise NoMoreRecordingsError, "No more recordings available for replay" if @playback_index >= @commands.size
 
       command = @commands[@playback_index]
       @playback_index += 1
