@@ -114,13 +114,25 @@ module Backspin
       record_path = Record.build_record_path(record_name)
       mode = determine_mode(options[:mode], record_path)
 
+      # Create or load the record based on mode
+      record = if mode == :record
+        Record.create(record_name)
+      else
+        Record.load_or_create!(record_path)
+      end
+
+      # Create recorder with all needed context
+      recorder = Recorder.new(record: record, options: options, mode: mode)
+
+      # Execute the appropriate mode
       case mode
       when :record
-        perform_recording(record_name, options, mode: mode, &block)
+        recorder.setup_recording_stubs(:capture3, :system)
+        recorder.perform_recording(&block)
       when :verify
-        perform_verification(record_name, record_path, options, &block)
+        recorder.perform_verification(&block)
       when :playback
-        perform_playback(record_name, record_path, options, &block)
+        recorder.perform_playback(&block)
       else
         raise ArgumentError, "Unknown mode: #{mode}"
       end
@@ -157,139 +169,5 @@ module Backspin
       File.exist?(record_path) ? :verify : :record
     end
 
-    def perform_recording(record_name, options, mode: nil, &block)
-      record = Record.create(record_name)
-      recorder = Recorder.new(record: record, options: options, mode: mode)
-      recorder.setup_recording_stubs(:capture3, :system)
-
-      recorder.perform_recording(&block)
-    end
-
-    # TODO: refactor to push behavior into recorder (similiar to perform_recording)
-    # TODO: remove record_path arg
-    # TODO: continue with other perform_ methods
-    def perform_verification(_record_name, record_path, options)
-      record = Record.load_or_create!(record_path)
-
-      raise RecordNotFoundError, "Record not found: #{record_path}" unless record.exists?
-      raise RecordNotFoundError, "No commands found in record" if record.empty?
-
-      # For verification, we need to track all commands executed
-      recorder = Recorder.new(mode: :verify, record: record)
-      recorder.setup_replay_stubs
-
-      # Track verification results for each command
-      command_diffs = []
-      command_index = 0
-
-      # Override stubs to verify each command as it's executed
-      allow(Open3).to receive(:capture3).and_wrap_original do |original_method, *args|
-        recorded_command = record.commands[command_index]
-
-        if recorded_command.nil?
-          raise RecordNotFoundError, "No more recorded commands, but tried to execute: #{args.inspect}"
-        end
-
-        if recorded_command.method_class != Open3::Capture3
-          raise RecordNotFoundError, "Expected #{recorded_command.method_class.name} but got Open3.capture3"
-        end
-
-        # Execute the actual command
-        stdout, stderr, status = original_method.call(*args)
-
-        # Create verification result
-        actual_result = CommandResult.new(
-          stdout: stdout,
-          stderr: stderr,
-          status: status.exitstatus
-        )
-
-        # Create CommandDiff to track the comparison
-        command_diffs << CommandDiff.new(
-          recorded_command: recorded_command,
-          actual_result: actual_result,
-          matcher: options[:matcher],
-          match_on: options[:match_on]
-        )
-
-        command_index += 1
-        [stdout, stderr, status]
-      end
-
-      allow_any_instance_of(Object).to receive(:system).and_wrap_original do |original_method, receiver, *args|
-        recorded_command = record.commands[command_index]
-
-        if recorded_command.nil?
-          raise RecordNotFoundError, "No more recorded commands, but tried to execute: system #{args.inspect}"
-        end
-
-        if recorded_command.method_class != ::Kernel::System
-          raise RecordNotFoundError, "Expected #{recorded_command.method_class.name} but got system"
-        end
-
-        # Execute the actual command
-        result = original_method.call(receiver, *args)
-
-        # Create verification result (system only gives us exit status)
-        actual_result = CommandResult.new(
-          stdout: "",
-          stderr: "",
-          status: result ? 0 : 1
-        )
-
-        # Create CommandDiff to track the comparison
-        command_diffs << CommandDiff.new(
-          recorded_command: recorded_command,
-          actual_result: actual_result,
-          matcher: options[:matcher],
-          match_on: options[:match_on]
-        )
-
-        command_index += 1
-        result
-      end
-
-      # Execute block
-      output = yield
-
-      # Check if all commands were executed
-      if command_index < record.commands.size
-        raise RecordNotFoundError, "Expected #{record.commands.size} commands but only #{command_index} were executed"
-      end
-
-      # Overall verification status
-      all_verified = command_diffs.all?(&:verified?)
-
-      RecordResult.new(
-        output: output,
-        mode: :verify,
-        verified: all_verified,
-        record_path: Pathname.new(record_path),
-        commands: record.commands,
-        command_diffs: command_diffs
-      )
-    end
-
-    def perform_playback(_record_name, record_path, _options)
-      record = Record.load_or_create(record_path)
-
-      raise RecordNotFoundError, "Record not found: #{record_path}" unless record.exists?
-      raise RecordNotFoundError, "No commands found in record" if record.empty?
-
-      # Setup replay mode - this will handle returning values for all commands
-      recorder = Recorder.new(mode: :replay, record: record)
-      recorder.setup_replay_stubs
-
-      # Execute block (all commands will be stubbed with recorded values)
-      output = yield
-
-      RecordResult.new(
-        output: output,
-        mode: :playback,
-        verified: true, # Always true for playback
-        record_path: Pathname.new(record_path),
-        commands: record.commands
-      )
-    end
   end
 end

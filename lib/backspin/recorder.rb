@@ -1,6 +1,8 @@
 require "open3"
 require "ostruct"
 require "rspec/mocks"
+require "backspin/command_result"
+require "backspin/command_diff"
 
 module Backspin
   # Handles stubbing and recording of command executions
@@ -16,6 +18,8 @@ module Backspin
       @options = options
       @commands = []
       @verification_data = {}
+      @playback_index = 0
+      @command_diffs = []
     end
 
     def setup_recording_stubs(*command_types)
@@ -44,42 +48,122 @@ module Backspin
       RecordResult.new(output: result, mode: :record, record_path: record.path, commands: record.commands)
     end
 
-    # Setup stubs for playback mode - just return recorded values
-    def setup_playback_stub(command)
-      if command.method_class == Open3::Capture3
-        actual_status = OpenStruct.new(exitstatus: command.status)
-        allow(Open3).to receive(:capture3).and_return([command.stdout, command.stderr, actual_status])
-      elsif command.method_class == ::Kernel::System
-        # For system, return true if exit status was 0
-        allow_any_instance_of(Object).to receive(:system).and_return(command.status == 0)
+    # Performs verification by executing commands and comparing with recorded values
+    def perform_verification
+      raise RecordNotFoundError, "Record not found: #{record.path}" unless record.exists?
+      raise RecordNotFoundError, "No commands found in record" if record.empty?
+
+      # Initialize tracking variables
+      @command_diffs = []
+      @command_index = 0
+
+      # Setup verification stubs for capture3
+      allow(Open3).to receive(:capture3).and_wrap_original do |original_method, *args|
+        recorded_command = record.commands[@command_index]
+
+        if recorded_command.nil?
+          raise RecordNotFoundError, "No more recorded commands, but tried to execute: #{args.inspect}"
+        end
+
+        if recorded_command.method_class != Open3::Capture3
+          raise RecordNotFoundError, "Expected #{recorded_command.method_class.name} but got Open3.capture3"
+        end
+
+        # Execute the actual command
+        stdout, stderr, status = original_method.call(*args)
+
+        # Create verification result
+        actual_result = CommandResult.new(
+          stdout: stdout,
+          stderr: stderr,
+          status: status.exitstatus
+        )
+
+        # Create CommandDiff to track the comparison
+        @command_diffs << CommandDiff.new(
+          recorded_command: recorded_command,
+          actual_result: actual_result,
+          matcher: options[:matcher],
+          match_on: options[:match_on]
+        )
+
+        @command_index += 1
+        [stdout, stderr, status]
       end
+
+      # Setup verification stubs for system
+      allow_any_instance_of(Object).to receive(:system).and_wrap_original do |original_method, receiver, *args|
+        recorded_command = record.commands[@command_index]
+
+        if recorded_command.nil?
+          raise RecordNotFoundError, "No more recorded commands, but tried to execute: system #{args.inspect}"
+        end
+
+        if recorded_command.method_class != ::Kernel::System
+          raise RecordNotFoundError, "Expected #{recorded_command.method_class.name} but got system"
+        end
+
+        # Execute the actual command
+        result = original_method.call(receiver, *args)
+
+        # Create verification result (system only gives us exit status)
+        actual_result = CommandResult.new(
+          stdout: "",
+          stderr: "",
+          status: result ? 0 : 1
+        )
+
+        # Create CommandDiff to track the comparison
+        @command_diffs << CommandDiff.new(
+          recorded_command: recorded_command,
+          actual_result: actual_result,
+          matcher: options[:matcher],
+          match_on: options[:match_on]
+        )
+
+        @command_index += 1
+        result
+      end
+
+      # Execute block
+      output = yield
+
+      # Check if all commands were executed
+      if @command_index < record.commands.size
+        raise RecordNotFoundError, "Expected #{record.commands.size} commands but only #{@command_index} were executed"
+      end
+
+      # Overall verification status
+      all_verified = @command_diffs.all?(&:verified?)
+
+      RecordResult.new(
+        output: output,
+        mode: :verify,
+        verified: all_verified,
+        record_path: record.path,
+        commands: record.commands,
+        command_diffs: @command_diffs
+      )
     end
 
-    # Setup stubs for verification - capture actual output
-    def setup_verification_stub(command)
-      @verification_data = {}
+    # Performs playback by returning recorded values without executing actual commands
+    def perform_playback
+      raise RecordNotFoundError, "Record not found: #{record.path}" unless record.exists?
+      raise RecordNotFoundError, "No commands found in record" if record.empty?
 
-      if command.method_class == Open3::Capture3
-        allow(Open3).to receive(:capture3).and_wrap_original do |original_method, *args|
-          stdout, stderr, status = original_method.call(*args)
-          @verification_data["stdout"] = stdout
-          @verification_data["stderr"] = stderr
-          @verification_data["status"] = status.exitstatus
-          [stdout, stderr, status]
-        end
-      elsif command.method_class == ::Kernel::System
-        allow_any_instance_of(Object).to receive(:system).and_wrap_original do |original_method, receiver, *args|
-          # Execute the real system call
-          result = original_method.call(receiver, *args)
+      # Setup replay stubs
+      setup_replay_stubs
 
-          # For system calls, we only track the exit status
-          @verification_data["stdout"] = ""
-          @verification_data["stderr"] = ""
-          @verification_data["status"] = result ? 0 : 1
+      # Execute block (all commands will be stubbed with recorded values)
+      output = yield
 
-          result
-        end
-      end
+      RecordResult.new(
+        output: output,
+        mode: :playback,
+        verified: true, # Always true for playback
+        record_path: record.path,
+        commands: record.commands
+      )
     end
 
     # Setup stubs for replay mode - returns recorded values for multiple commands
