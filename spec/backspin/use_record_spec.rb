@@ -117,7 +117,7 @@ RSpec.describe "Backspin.run" do
       stdout, stderr, status = result.output
       expect(stdout).to eq("stdout\n")
       expect(stderr).to eq("stderr\n")
-      expect(status).to eq(42)
+      expect(status.exitstatus).to eq(42)
     end
 
     it "supports options hash" do

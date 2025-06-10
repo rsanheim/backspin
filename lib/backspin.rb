@@ -118,7 +118,7 @@ module Backspin
       record = if mode == :record
         Record.create(record_name)
       else
-        Record.load_or_create!(record_path)
+        Record.load_or_create(record_path)
       end
 
       # Create recorder with all needed context
@@ -168,6 +168,5 @@ module Backspin
       # Auto mode: record if file doesn't exist, verify if it does
       File.exist?(record_path) ? :verify : :record
     end
-
   end
 end

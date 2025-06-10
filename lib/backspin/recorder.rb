@@ -69,20 +69,20 @@ module Backspin
           raise RecordNotFoundError, "Expected #{recorded_command.method_class.name} but got Open3.capture3"
         end
 
-        # Execute the actual command
         stdout, stderr, status = original_method.call(*args)
 
-        # Create verification result
-        actual_result = CommandResult.new(
+        # TODO should we store the actual commands as well to make it easier to diff / compare / etc?
+        actual_command = Command.new(
+          method_class: Open3::Capture3,
+          args: args,
           stdout: stdout,
           stderr: stderr,
           status: status.exitstatus
         )
 
-        # Create CommandDiff to track the comparison
         @command_diffs << CommandDiff.new(
           recorded_command: recorded_command,
-          actual_result: actual_result,
+          actual_result: actual_command.result,
           matcher: options[:matcher],
           match_on: options[:match_on]
         )
@@ -103,10 +103,8 @@ module Backspin
           raise RecordNotFoundError, "Expected #{recorded_command.method_class.name} but got system"
         end
 
-        # Execute the actual command
         result = original_method.call(receiver, *args)
 
-        # Create verification result (system only gives us exit status)
         actual_result = CommandResult.new(
           stdout: "",
           stderr: "",
@@ -125,7 +123,6 @@ module Backspin
         result
       end
 
-      # Execute block
       output = yield
 
       # Check if all commands were executed

@@ -49,8 +49,9 @@ RSpec.describe Backspin do
       expect(result.commands[1].args).to eq(["echo", "second"])
       expect(result.commands[2].args).to eq(["echo", "third"])
 
-      expect(result.record_path).to exist
-      record_data = YAML.load_file(result.record_path)
+      record = backspin_path.join("multi_command.yml")
+      expect(record).to exist
+      record_data = YAML.load_file(record)
 
       # Multiple commands should be stored in new format
       expect(record_data).to be_a(Hash)
