@@ -7,8 +7,10 @@ require "pathname"
 require "ostruct"
 require "rspec/mocks"
 require "backspin/version"
+require "backspin/configuration"
 require "backspin/command_result"
 require "backspin/command"
+require "backspin/matcher"
 require "backspin/command_diff"
 require "backspin/record"
 require "backspin/recorder"
@@ -19,58 +21,6 @@ module Backspin
 
   # Include RSpec mocks methods
   extend RSpec::Mocks::ExampleMethods
-
-  # Configuration for Backspin
-  class Configuration
-    attr_accessor :scrub_credentials
-    # The directory where backspin will store its files - defaults to fixtures/backspin
-    attr_accessor :backspin_dir
-    # Regex patterns to scrub from saved output
-    attr_reader :credential_patterns
-
-    def initialize
-      @scrub_credentials = true
-      @credential_patterns = default_credential_patterns
-      @backspin_dir = Pathname(Dir.pwd).join("fixtures", "backspin")
-    end
-
-    def add_credential_pattern(pattern)
-      @credential_patterns << pattern
-    end
-
-    def clear_credential_patterns
-      @credential_patterns = []
-    end
-
-    def reset_credential_patterns
-      @credential_patterns = default_credential_patterns
-    end
-
-    private
-
-    # Some default patterns for common credential types
-    def default_credential_patterns
-      [
-        # AWS credentials
-        /AKIA[0-9A-Z]{16}/, # AWS Access Key ID
-        %r{aws_secret_access_key\s*[:=]\s*["']?([A-Za-z0-9/+=]{40})["']?}i,  # AWS Secret Key
-        %r{aws_session_token\s*[:=]\s*["']?([A-Za-z0-9/+=]+)["']?}i,         # AWS Session Token
-
-        # Google Cloud credentials
-        /AIza[0-9A-Za-z\-_]{35}/, # Google API Key
-        /[0-9]+-[0-9A-Za-z_]{32}\.apps\.googleusercontent\.com/, # Google OAuth2 client ID
-        /-----BEGIN (RSA )?PRIVATE KEY-----/, # Private keys
-
-        # Generic patterns
-        /api[_-]?key\s*[:=]\s*["']?([A-Za-z0-9\-_]{20,})["']?/i, # Generic API keys
-        /auth[_-]?token\s*[:=]\s*["']?([A-Za-z0-9\-_]{20,})["']?/i, # Auth tokens
-        /Bearer\s+([A-Za-z0-9\-_]+)/,                               # Bearer tokens
-        /password\s*[:=]\s*["']?([^"'\s]{8,})["']?/i, # Passwords
-        /-p([^"'\s]{8,})/, # MySQL-style password args
-        /secret\s*[:=]\s*["']?([A-Za-z0-9\-_]{20,})["']?/i # Generic secrets
-      ]
-    end
-  end
 
   class << self
     def configuration
@@ -102,22 +52,21 @@ module Backspin
     # Primary API - records on first run, verifies on subsequent runs
     #
     # @param record_name [String] Name for the record file
-    # @param options [Hash] Options for recording/verification
-    # @option options [Symbol] :mode (:auto) Recording mode - :auto, :record, :verify, :playback
-    # @option options [Proc] :filter Custom filter for recorded data
-    # @option options [Proc, Hash] :matcher Custom matcher for verification
+    # @param mode [Symbol] Recording mode - :auto, :record, :verify, :playback
+    # @param matcher [Proc, Hash] Custom matcher for verification
     #   - Proc: ->(recorded, actual) { ... } for full command matching
     #   - Hash: { stdout: ->(recorded, actual) { ... }, stderr: ->(recorded, actual) { ... } } for field-specific matching
-    #   - Hash with :all key: { all: ->(recorded, actual) { ... }, stdout: ->(recorded, actual) { ... } } for combined matching
-    #     When both :all and field matchers are present, both must pass for verification to succeed.
-    #     Fields without specific matchers always use exact equality, regardless of :all presence.
+    #     Only specified fields are checked - fields without matchers are ignored
+    #   - Hash with :all key: { all: ->(recorded, actual) { ... } } receives full command hashes
+    #     Can be combined with field matchers - all specified matchers must pass
+    # @param filter [Proc] Custom filter for recorded data
     # @return [RecordResult] Result object with output and status
-    def run(record_name, options = {}, &block)
+    def run(record_name, mode: :auto, matcher: nil, filter: nil, &block)
       raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
       raise ArgumentError, "block is required" unless block_given?
 
       record_path = Record.build_record_path(record_name)
-      mode = determine_mode(options[:mode], record_path)
+      mode = determine_mode(mode, record_path)
 
       # Create or load the record based on mode
       record = if mode == :record
@@ -127,7 +76,7 @@ module Backspin
       end
 
       # Create recorder with all needed context
-      recorder = Recorder.new(record: record, options: options, mode: mode)
+      recorder = Recorder.new(record: record, mode: mode, matcher: matcher, filter: filter)
 
       # Execute the appropriate mode
       case mode
@@ -146,11 +95,13 @@ module Backspin
     # Strict version of run that raises on verification failure
     #
     # @param record_name [String] Name for the record file
-    # @param options [Hash] Options for recording/verification
+    # @param mode [Symbol] Recording mode - :auto, :record, :verify, :playback
+    # @param matcher [Proc, Hash] Custom matcher for verification
+    # @param filter [Proc] Custom filter for recorded data
     # @return [RecordResult] Result object with output and status
     # @raise [RSpec::Expectations::ExpectationNotMetError] If verification fails
-    def run!(record_name, options = {}, &block)
-      result = run(record_name, options, &block)
+    def run!(record_name, mode: :auto, matcher: nil, filter: nil, &block)
+      result = run(record_name, mode: mode, matcher: matcher, filter: filter, &block)
 
       if result.verified? == false
         error_message = "Backspin verification failed!\n"

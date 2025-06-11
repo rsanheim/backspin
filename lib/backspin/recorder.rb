@@ -12,12 +12,13 @@ module Backspin
     include RSpec::Mocks::ExampleMethods
     SUPPORTED_COMMAND_TYPES = %i[capture3 system].freeze
 
-    attr_reader :commands, :mode, :record, :options
+    attr_reader :commands, :mode, :record, :matcher, :filter
 
-    def initialize(mode: :record, record: nil, options: {})
+    def initialize(mode: :record, record: nil, matcher: nil, filter: nil)
       @mode = mode
       @record = record
-      @options = options
+      @matcher = matcher
+      @filter = filter
       @commands = []
       @playback_index = 0
       @command_diffs = []
@@ -45,14 +46,14 @@ module Backspin
     # Records registered commands, adds them to the record, saves the record, and returns the overall RecordResult
     def perform_recording
       result = yield
-      record.save(filter: options[:filter])
+      record.save(filter: @filter)
       RecordResult.new(output: result, mode: :record, record: record)
     end
 
     # Performs verification by executing commands and comparing with recorded values
     def perform_verification
       raise RecordNotFoundError, "Record not found: #{record.path}" unless record.exists?
-      raise RecordNotFoundError, "No commands found in record" if record.empty?
+      raise RecordNotFoundError, "No commands found in record #{record.path}" if record.empty?
 
       # Initialize tracking variables
       @command_diffs = []
@@ -76,7 +77,7 @@ module Backspin
           status: status.exitstatus
         )
 
-        @command_diffs << CommandDiff.new(recorded_command: recorded_command, actual_command: actual_command, matcher: options[:matcher])
+        @command_diffs << CommandDiff.new(recorded_command: recorded_command, actual_command: actual_command, matcher: @matcher)
         @command_index += 1
         [stdout, stderr, status]
       end
@@ -96,7 +97,7 @@ module Backspin
         )
 
         # Create CommandDiff to track the comparison
-        @command_diffs << CommandDiff.new(recorded_command: recorded_command, actual_command: actual_command, matcher: options[:matcher])
+        @command_diffs << CommandDiff.new(recorded_command: recorded_command, actual_command: actual_command, matcher: @matcher)
 
         @command_index += 1
         result

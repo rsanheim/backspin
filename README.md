@@ -5,17 +5,19 @@
 [![CircleCI](https://img.shields.io/circleci/build/github/rsanheim/backspin/main)](https://circleci.com/gh/rsanheim/backspin)
 [![Last Commit](https://img.shields.io/github/last-commit/rsanheim/backspin/main)](https://github.com/rsanheim/backspin/commits/main)
 
-Backspin records and replays CLI interactions in Ruby for easy snapshot testing of command-line interfaces. Currently supports `Open3.capture3` and `system` and requires `rspec-mocks`.  More system calls and test integrations are welcome - send a PR!
+Backspin records and replays CLI interactions in Ruby for easy snapshot testing of command-line interfaces. Currently supports `Open3.capture3` and `system` and requires `rspec`, as it uses `rspec-mocks` under the hood.
 
-**NOTE:** Backspin should be considered alpha quality software while pre v1.0. It is in heavy development, and you can expect the API to change. It is being developed in conjunction with production CLI apps, so the API will be refined and improved as we get to 1.0.
+**NOTE:** Backspin should be considered alpha while pre version 1.0. It is in heavy development along-side some real-world CLI apps, so expect things to change and mature.
 
-Inspired by [VCR](https://github.com/vcr/vcr) and other [golden master](https://en.wikipedia.org/wiki/Golden_master_(software_development)) libraries.
+Inspired by [VCR](https://github.com/vcr/vcr) and other [golden master](https://en.wikipedia.org/wiki/Golden_master_(software_development)) testing libraries.
 
 ## Overview
 
 Backspin is a Ruby library for snapshot testing (or characterization testing) of command-line interfaces. While VCR records and replays HTTP interactions, Backspin records and replays CLI interactions - capturing stdout, stderr, and exit status from shell commands. 
 
 ## Installation
+
+Requires Ruby 3+ and will use rspec-mocks under the hood...Backspin has not been tested in other test frameworks.
 
 Add this line to your application's Gemfile in the `:test` group:
 
@@ -95,19 +97,46 @@ end
 
 ### Custom matchers
 
-For cases where exact matching isn't suitable, you can provide custom verification logic:
+For cases where full matching isn't suitable, you can override via `matcher:`. **NOTE**: If you provide
+custom matchers, that is the only matching that will be done. Default matching is skipped if user-provided
+matchers are present.
+
+You can override the full match logic with a proc:
 
 ```ruby
-# Use custom logic to verify output
-result = Backspin.run("version_check", 
-                     matcher: ->(recorded, actual) {
-                       # Just check that both start with "ruby"
-                       recorded["stdout"].start_with?("ruby") && 
-                       actual["stdout"].start_with?("ruby")
-                     }) do
-  Open3.capture3("ruby --version")
+# Match stdout and status, ignore stderr
+my_matcher = ->(recorded, actual) {
+  recorded["stdout"] == actual["stdout"] && recorded["status"] != actual["status"]
+}
+
+result = Backspin.run("my_test", matcher: { all: my_matcher }) do
+  Open3.capture3("echo hello")
 end
 ```
+
+Or you can override specific fields:
+
+```ruby
+# Match dynamic timestamps in stdout
+timestamp_matcher = ->(recorded, actual) {
+  recorded.match?(/\d{4}-\d{2}-\d{2}/) && actual.match?(/\d{4}-\d{2}-\d{2}/)
+}
+
+result = Backspin.run("timestamp_test", matcher: { stdout: timestamp_matcher }) do
+  Open3.capture3("date")
+end
+
+# Match version numbers in stderr
+version_matcher = ->(recorded, actual) {
+  recorded[/v(\d+)\./, 1] == actual[/v(\d+)\./, 1]
+}
+
+result = Backspin.run("version_check", matcher: { stderr: version_matcher }) do
+  Open3.capture3("node --version")
+end
+```
+
+For more matcher examples and detailed documentation, see [MATCHERS.md](MATCHERS.md).
 
 ### Working with the Result Object
 
@@ -174,10 +203,10 @@ When verifying multiple commands, Backspin ensures all commands match in the exa
 
 If the CLI interaction you are recording contains sensitive data in stdout or stderr, you should be careful to make sure it is not recorded to yaml!
 
-By default, Backspin automatically scrubs [common credential patterns](https://github.com/rsanheim/backspin/blob/f8661f084aad0ae759cd971c4af31ccf9bdc6bba/lib/backspin.rb#L46-L65) from records, but this will only handle some common cases.
+By default, Backspin automatically tries to scrub [common credential patterns](https://github.com/rsanheim/backspin/blob/f8661f084aad0ae759cd971c4af31ccf9bdc6bba/lib/backspin.rb#L46-L65) from records, but this will only handle some common cases.
 Always review your record files before commiting them to source control. 
 
-A tool like [trufflehog](https://github.com/trufflesecurity/trufflehog) or [gitleaks](https://github.com/gitleaks/gitleaks) run via a pre-commit to catch any sensitive data before commit. 
+Use a tool like [trufflehog](https://github.com/trufflesecurity/trufflehog) or [gitleaks](https://github.com/gitleaks/gitleaks) run via a pre-commit to catch any sensitive data before commit. 
 
 ```ruby
 # This will automatically scrub AWS keys, API tokens, passwords, etc.
@@ -194,7 +223,6 @@ end
 Backspin.configure do |config|
   config.scrub_credentials = false
 end
-
 ```
 
 Automatic scrubbing includes:
@@ -202,16 +230,6 @@ Automatic scrubbing includes:
 - Google API keys and OAuth client IDs
 - Generic API keys, auth tokens, and passwords
 - Private keys (RSA, etc.)
-
-## Features
-
-- **Simple recording**: Capture stdout, stderr, and exit status
-- **Flexible verification**: Strict matching, playback mode, or custom matchers
-- **Auto-naming**: Automatically generate record names from RSpec examples
-- **Multiple commands**: Record sequences of commands in a single record
-- **RSpec integration**: Works seamlessly with RSpec's mocking framework
-- **Human-readable**: YAML records are easy to read and edit
-- **Credential scrubbing**: Automatically removes sensitive data like API keys and passwords
 
 ## Development
 

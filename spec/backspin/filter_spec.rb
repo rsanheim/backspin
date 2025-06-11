@@ -27,7 +27,6 @@ RSpec.describe "Backspin filtering support" do
       end
 
       # Verify the saved file has normalized timestamps
-      pp Backspin.configuration.backspin_dir
       record_path = Backspin.configuration.backspin_dir.join("timestamp_test.yml")
       saved_data = YAML.load_file(record_path)
       expect(saved_data["commands"].first["stdout"]).to eq("Test run at TIMESTAMP\n")
@@ -35,7 +34,6 @@ RSpec.describe "Backspin filtering support" do
 
     it "applies filter to remove absolute paths" do
       path_filter = lambda { |data|
-        # Normalize paths like /Users/username/project to PROJECT_ROOT
         data["stdout"] = data["stdout"].gsub(%r{/Users/\w+/\w+}, "PROJECT_ROOT")
         data
       }
@@ -51,7 +49,6 @@ RSpec.describe "Backspin filtering support" do
 
     it "applies filter to multiple commands" do
       counter_filter = lambda { |data|
-        # Replace any number with X
         data["stdout"] = data["stdout"].gsub(/\d+/, "X")
         data
       }
