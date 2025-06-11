@@ -46,7 +46,7 @@ module Backspin
     def perform_recording
       result = yield
       record.save(filter: options[:filter])
-      RecordResult.new(output: result, mode: :record, record: record, commands: record.commands)
+      RecordResult.new(output: result, mode: :record, record: record)
     end
 
     # Performs verification by executing commands and comparing with recorded values
@@ -111,7 +111,6 @@ module Backspin
         mode: :verify,
         verified: all_verified,
         record: record,
-        commands: record.commands,
         command_diffs: @command_diffs
       )
     end
@@ -132,8 +131,7 @@ module Backspin
         output: output,
         mode: :playback,
         verified: true, # Always true for playback
-        record: record,
-        commands: record.commands
+        record: record
       )
     end
 

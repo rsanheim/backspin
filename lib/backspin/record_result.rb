@@ -7,11 +7,11 @@ module Backspin
     attr_reader :output, :commands, :mode, :command_diffs
     attr_reader :record
 
-    def initialize(output:, mode:, record:, commands:, verified: nil, command_diffs: nil)
+    def initialize(output:, mode:, record:, verified: nil, command_diffs: nil)
       @output = output
       @mode = mode
       @record = record
-      @commands = commands
+      @commands = record.commands
       @verified = verified
       @command_diffs = command_diffs || []
     end
@@ -145,7 +145,7 @@ module Backspin
         playback: playback?,
         stdout: stdout,
         stderr: stderr,
-        status: status,
+        status: status
       }
 
       hash[:verified] = verified? unless verified?.nil?
