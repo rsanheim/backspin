@@ -1,0 +1,13 @@
+# Configuration for gem-release
+bump:
+  commit: true
+  message: "Bump version to %{version}"
+  skip_ci: false
+  push: true
+
+tag:
+  tag: v%{version}
+  sign: false
+
+release:
+  host: https://rubygems.org

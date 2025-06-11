@@ -7,3 +7,6 @@ require "standard/rake"
 RSpec::Core::RakeTask.new(:spec)
 
 task default: %i[spec standard]
+
+# Load release tasks if the file exists
+load "release.rake" if File.exist?("release.rake")
