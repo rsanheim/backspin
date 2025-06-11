@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe Backspin do
@@ -16,8 +18,8 @@ RSpec.describe Backspin do
       end
       expect(result.commands.size).to eq(1)
       expect(result.commands.first.method_class).to eq(Open3::Capture3)
-      expect(result.commands.first.args).to eq(["echo", "hello"])
-      expect(result.record_path.to_s).to end_with("echo_hello.yml")
+      expect(result.commands.first.args).to eq(%w[echo hello])
+      expect(result.record.path.to_s).to end_with("echo_hello.yml")
 
       expect(backspin_path.join("echo_hello.yml")).to exist
 
@@ -29,7 +31,7 @@ RSpec.describe Backspin do
       expect(results["commands"].size).to eq(1)
       expect(results["commands"].first).to include({
         "command_type" => "Open3::Capture3",
-        "args" => ["echo", "hello"],
+        "args" => %w[echo hello],
         "stdout" => "hello\n",
         "stderr" => "",
         "status" => 0,
@@ -45,12 +47,13 @@ RSpec.describe Backspin do
       end
 
       expect(result.commands.size).to eq(3)
-      expect(result.commands[0].args).to eq(["echo", "first"])
-      expect(result.commands[1].args).to eq(["echo", "second"])
-      expect(result.commands[2].args).to eq(["echo", "third"])
+      expect(result.commands[0].args).to eq(%w[echo first])
+      expect(result.commands[1].args).to eq(%w[echo second])
+      expect(result.commands[2].args).to eq(%w[echo third])
 
-      expect(result.record_path).to exist
-      record_data = YAML.load_file(result.record_path)
+      record = backspin_path.join("multi_command.yml")
+      expect(record).to exist
+      record_data = YAML.load_file(record)
 
       # Multiple commands should be stored in new format
       expect(record_data).to be_a(Hash)
@@ -60,7 +63,7 @@ RSpec.describe Backspin do
 
       expect(record_data["commands"][0]).to include({
         "command_type" => "Open3::Capture3",
-        "args" => ["echo", "first"],
+        "args" => %w[echo first],
         "stdout" => "first\n",
         "stderr" => "",
         "status" => 0,
@@ -69,7 +72,7 @@ RSpec.describe Backspin do
 
       expect(record_data["commands"][1]).to include({
         "command_type" => "Open3::Capture3",
-        "args" => ["echo", "second"],
+        "args" => %w[echo second],
         "stdout" => "second\n",
         "stderr" => "",
         "status" => 0,
@@ -78,7 +81,7 @@ RSpec.describe Backspin do
 
       expect(record_data["commands"][2]).to include({
         "command_type" => "Open3::Capture3",
-        "args" => ["echo", "third"],
+        "args" => %w[echo third],
         "stdout" => "third\n",
         "stderr" => "",
         "status" => 0,
@@ -89,26 +92,26 @@ RSpec.describe Backspin do
 
   context "run with invalid args"
   it "raises ArgumentError when no record name is provided" do
-    expect {
+    expect do
       Backspin.run do
         Open3.capture3("echo hello")
       end
-    }.to raise_error(ArgumentError, /wrong number of arguments/)
+    end.to raise_error(ArgumentError, /wrong number of arguments/)
   end
 
   it "raises ArgumentError when record name is nil" do
-    expect {
+    expect do
       Backspin.run(nil, mode: :record) do
         Open3.capture3("echo hello")
       end
-    }.to raise_error(ArgumentError, "record_name is required")
+    end.to raise_error(ArgumentError, "record_name is required")
   end
 
   it "raises ArgumentError when record name is empty" do
-    expect {
+    expect do
       Backspin.run("", mode: :record) do
         Open3.capture3("echo hello")
       end
-    }.to raise_error(ArgumentError, "record_name is required")
+    end.to raise_error(ArgumentError, "record_name is required")
   end
 end

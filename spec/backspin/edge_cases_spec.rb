@@ -1,12 +1,14 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe "Backspin edge cases" do
   it "raises error for empty record name" do
-    expect {
+    expect do
       Backspin.run("", mode: :record) do
         Open3.capture3("echo empty")
       end
-    }.to raise_error(ArgumentError, "record_name is required")
+    end.to raise_error(ArgumentError, "record_name is required")
   end
 
   it "sanitizes record names with special characters" do

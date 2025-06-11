@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Run Standard Ruby linter
+echo "Running Standard Ruby linter..."
+bundle exec standardrb "$@"

@@ -88,13 +88,14 @@ RSpec.describe "Backspin.run with multiple commands" do
       end
 
       # Try to verify with only 2 commands
-      expect do
-        Backspin.run("multi_too_few") do
-          Open3.capture3("echo one")
-          Open3.capture3("echo two")
-          # Missing third command
-        end
-      end.to raise_error(Backspin::RecordNotFoundError, /Expected 3 commands but only 2 were executed/)
+      result = Backspin.run("multi_too_few") do
+        Open3.capture3("echo one")
+        Open3.capture3("echo two")
+        # Missing third command
+      end
+
+      expect(result.verified?).to be false
+      expect(result.error_message).to eq("Expected 3 commands but only 2 were executed")
     end
 
     it "fails if more commands are executed than recorded" do

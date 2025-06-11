@@ -1,25 +1,30 @@
+# frozen_string_literal: true
+
 require "open3"
 require "ostruct"
 require "rspec/mocks"
+require "backspin/command_result"
+require "backspin/command_diff"
 
 module Backspin
   # Handles stubbing and recording of command executions
   class Recorder
     include RSpec::Mocks::ExampleMethods
-    SUPPORTED_COMMAND_TYPES = [:capture3, :system]
+    SUPPORTED_COMMAND_TYPES = %i[capture3 system].freeze
 
-    attr_reader :commands, :verification_data, :mode, :record
+    attr_reader :commands, :mode, :record, :options
 
-    def initialize(mode: :record, record: nil)
+    def initialize(mode: :record, record: nil, options: {})
       @mode = mode
       @record = record
+      @options = options
       @commands = []
-      @verification_data = {}
+      @playback_index = 0
+      @command_diffs = []
     end
 
-    def record_calls(*command_types)
+    def setup_recording_stubs(*command_types)
       command_types = SUPPORTED_COMMAND_TYPES if command_types.empty?
-
       command_types.each do |command_type|
         record_call(command_type)
       end
@@ -32,66 +37,109 @@ module Backspin
       when :capture3
         setup_capture3_call_stub
       else
-        raise ArgumentError, "Unsupported command type: #{command_type} - currently supported types: #{SUPPORTED_COMMAND_TYPES.join(", ")}"
+        raise ArgumentError,
+          "Unsupported command type: #{command_type} - currently supported types: #{SUPPORTED_COMMAND_TYPES.join(", ")}"
       end
     end
 
-    # Setup stubs for playback mode - just return recorded values
-    def setup_playback_stub(command)
-      if command.method_class == Open3::Capture3
-        actual_status = OpenStruct.new(exitstatus: command.status)
-        allow(Open3).to receive(:capture3).and_return([command.stdout, command.stderr, actual_status])
-      elsif command.method_class == ::Kernel::System
-        # For system, return true if exit status was 0
-        allow_any_instance_of(Object).to receive(:system).and_return(command.status == 0)
-      end
+    # Records registered commands, adds them to the record, saves the record, and returns the overall RecordResult
+    def perform_recording
+      result = yield
+      record.save(filter: options[:filter])
+      RecordResult.new(output: result, mode: :record, record: record)
     end
 
-    # Setup stubs for verification - capture actual output
-    def setup_verification_stub(command)
-      @verification_data = {}
+    # Performs verification by executing commands and comparing with recorded values
+    def perform_verification
+      raise RecordNotFoundError, "Record not found: #{record.path}" unless record.exists?
+      raise RecordNotFoundError, "No commands found in record" if record.empty?
 
-      if command.method_class == Open3::Capture3
-        allow(Open3).to receive(:capture3).and_wrap_original do |original_method, *args|
-          stdout, stderr, status = original_method.call(*args)
-          @verification_data["stdout"] = stdout
-          @verification_data["stderr"] = stderr
-          @verification_data["status"] = status.exitstatus
-          [stdout, stderr, status]
+      # Initialize tracking variables
+      @command_diffs = []
+      @command_index = 0
+
+      # Setup verification stubs for capture3
+      allow(Open3).to receive(:capture3).and_wrap_original do |original_method, *args|
+        recorded_command = record.commands[@command_index]
+
+        if recorded_command.nil?
+          raise RecordNotFoundError, "No more recorded commands, but tried to execute: #{args.inspect}"
         end
-      elsif command.method_class == ::Kernel::System
-        allow_any_instance_of(Object).to receive(:system).and_wrap_original do |original_method, receiver, *args|
-          # Execute the real system call
-          result = original_method.call(receiver, *args)
 
-          # For system calls, we only track the exit status
-          @verification_data["stdout"] = ""
-          @verification_data["stderr"] = ""
-          @verification_data["status"] = result ? 0 : 1
+        stdout, stderr, status = original_method.call(*args)
 
-          result
-        end
+        actual_command = Command.new(
+          method_class: Open3::Capture3,
+          args: args,
+          stdout: stdout,
+          stderr: stderr,
+          status: status.exitstatus
+        )
+
+        @command_diffs << CommandDiff.new(recorded_command: recorded_command, actual_command: actual_command, matcher: options[:matcher])
+        @command_index += 1
+        [stdout, stderr, status]
       end
+
+      # Setup verification stubs for system
+      allow_any_instance_of(Object).to receive(:system).and_wrap_original do |original_method, receiver, *args|
+        recorded_command = record.commands[@command_index]
+
+        result = original_method.call(receiver, *args)
+
+        actual_command = Command.new(
+          method_class: ::Kernel::System,
+          args: args,
+          stdout: "",
+          stderr: "",
+          status: result ? 0 : 1
+        )
+
+        # Create CommandDiff to track the comparison
+        @command_diffs << CommandDiff.new(recorded_command: recorded_command, actual_command: actual_command, matcher: options[:matcher])
+
+        @command_index += 1
+        result
+      end
+
+      output = yield
+
+      all_verified = @command_diffs.all?(&:verified?)
+
+      RecordResult.new(
+        output: output,
+        mode: :verify,
+        verified: all_verified,
+        record: record,
+        command_diffs: @command_diffs
+      )
     end
 
-    # Setup stubs for replay mode - returns recorded values for multiple commands
-    def setup_replay_stubs
-      raise ArgumentError, "Record required for replay mode" unless @record
+    # Performs playback by returning recorded values without executing actual commands
+    def perform_playback
+      raise RecordNotFoundError, "Record not found: #{record.path}" unless record.exists?
+      raise RecordNotFoundError, "No commands found in record" if record.empty?
 
+      # Setup replay stubs
       setup_capture3_replay_stub
       setup_system_replay_stub
+
+      # Execute block (all commands will be stubbed with recorded values)
+      output = yield
+
+      RecordResult.new(
+        output: output,
+        mode: :playback,
+        verified: true, # Always true for playback
+        record: record
+      )
     end
 
     private
 
     def setup_capture3_replay_stub
-      allow(Open3).to receive(:capture3) do |*args|
+      allow(Open3).to receive(:capture3) do |*_args|
         command = @record.next_command
-
-        # Make sure this is a capture3 command
-        unless command.method_class == Open3::Capture3
-          raise RecordNotFoundError, "Expected Open3::Capture3 command but got #{command.method_class.name}"
-        end
 
         recorded_stdout = command.stdout
         recorded_stderr = command.stderr
@@ -104,14 +152,10 @@ module Backspin
     end
 
     def setup_system_replay_stub
-      allow_any_instance_of(Object).to receive(:system) do |receiver, *args|
+      allow_any_instance_of(Object).to receive(:system) do |_receiver, *_args|
         command = @record.next_command
 
-        unless command.method_class == ::Kernel::System
-          raise RecordNotFoundError, "Expected Kernel::System command but got #{command.method_class.name}"
-        end
-
-        command.status == 0
+        command.status.zero?
       rescue NoMoreRecordingsError => e
         raise RecordNotFoundError, e.message
       end
@@ -135,7 +179,7 @@ module Backspin
           status: status.exitstatus,
           recorded_at: Time.now.iso8601
         )
-        @commands << command
+        record.add_command(command)
 
         [stdout, stderr, status]
       end
@@ -154,7 +198,8 @@ module Backspin
           args
         end
 
-        stdout, stderr = "", ""
+        stdout = ""
+        stderr = ""
         status = result ? 0 : 1
 
         command = Command.new(
@@ -165,7 +210,7 @@ module Backspin
           status: status,
           recorded_at: Time.now.iso8601
         )
-        @commands << command
+        record.add_command(command)
 
         result
       end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe "Backspin verify functionality" do
@@ -95,7 +97,7 @@ RSpec.describe "Backspin verify functionality" do
       end
 
       result = Backspin.run("version_test",
-        matcher: ->(recorded, actual) {
+        matcher: lambda { |recorded, actual|
           recorded["stdout"].start_with?("ruby") && actual["stdout"].start_with?("ruby")
         }) do
         Open3.capture3("ruby --version")
@@ -107,11 +109,11 @@ RSpec.describe "Backspin verify functionality" do
 
   describe "error handling" do
     it "raises error when record doesn't exist" do
-      expect {
+      expect do
         Backspin.run("nonexistent", mode: :verify) do
           Open3.capture3("echo test")
         end
-      }.to raise_error(Backspin::RecordNotFoundError, /nonexistent.yml/)
+      end.to raise_error(Backspin::RecordNotFoundError, /nonexistent.yml/)
     end
 
     it "provides helpful error messages on verification failure" do

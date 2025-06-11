@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe Backspin::Record do
@@ -18,17 +20,17 @@ RSpec.describe Backspin::Record do
     end
 
     it "loads existing commands if file exists" do
-      # Create a record file with new format
       FileUtils.mkdir_p(File.dirname(record_path))
       File.write(record_path, {
         "format_version" => "2.0",
         "first_recorded_at" => "2024-01-01T00:00:00Z",
         "commands" => [
-          {"command_type" => "Open3::Capture3", "args" => ["echo", "hello"], "stdout" => "hello\n", "stderr" => "", "status" => 0, "recorded_at" => "2024-01-01T00:00:00Z"}
+          {"command_type" => "Open3::Capture3", "args" => %w[echo hello], "stdout" => "hello\n", "stderr" => "",
+           "status" => 0, "recorded_at" => "2024-01-01T00:00:00Z"}
         ]
       }.to_yaml)
 
-      loaded_record = described_class.new(record_path)
+      loaded_record = described_class.load_from_file(record_path)
       expect(loaded_record.commands.size).to eq(1)
       expect(loaded_record.commands.first).to be_a(Backspin::Command)
       expect(loaded_record.commands.first.stdout).to eq("hello\n")
@@ -39,9 +41,9 @@ RSpec.describe Backspin::Record do
       FileUtils.mkdir_p(File.dirname(record_path))
       File.write(record_path, "not an array")
 
-      expect {
-        described_class.new(record_path)
-      }.to raise_error(Backspin::RecordFormatError, /Invalid record format/)
+      expect do
+        described_class.load_from_file(record_path)
+      end.to raise_error(Backspin::RecordFormatError, /Invalid record format/)
     end
   end
 
@@ -49,7 +51,7 @@ RSpec.describe Backspin::Record do
     it "adds a command to the record" do
       command = Backspin::Command.new(
         method_class: Open3::Capture3,
-        args: ["echo", "hello"],
+        args: %w[echo hello],
         stdout: "hello\n",
         stderr: "",
         status: 0,
@@ -63,7 +65,7 @@ RSpec.describe Backspin::Record do
     it "returns self for chaining" do
       command = Backspin::Command.new(
         method_class: Open3::Capture3,
-        args: ["echo", "test"],
+        args: %w[echo test],
         stdout: "test\n",
         stderr: "",
         status: 0,
@@ -100,20 +102,16 @@ RSpec.describe Backspin::Record do
     end
 
     it "overwrites existing file" do
-      # Create initial file with new format
       FileUtils.mkdir_p(File.dirname(record_path))
       File.write(record_path, {
         "format_version" => "2.0",
         "first_recorded_at" => Time.now.iso8601,
-        "commands" => [{"command_type" => "Open3::Capture3", "args" => ["echo", "old"], "stdout" => "old\n", "stderr" => "", "status" => 0, "recorded_at" => Time.now.iso8601}]
+        "commands" => [{"command_type" => "Open3::Capture3", "args" => %w[echo old], "stdout" => "old\n",
+                        "stderr" => "", "status" => 0, "recorded_at" => Time.now.iso8601}]
       }.to_yaml)
 
-      # Create a new record instance that won't load the existing data
       new_record = described_class.new(record_path)
-      expect(new_record.size).to eq(1)  # It loaded the existing data
 
-      # Clear and add new data
-      new_record.clear
       new_record.add_command(create_test_command("new"))
       new_record.save
 
@@ -171,7 +169,8 @@ RSpec.describe Backspin::Record do
         "format_version" => "2.0",
         "first_recorded_at" => Time.now.iso8601,
         "commands" => [
-          {"command_type" => "Open3::Capture3", "args" => ["echo", "external"], "stdout" => "external\n", "stderr" => "", "status" => 0, "recorded_at" => Time.now.iso8601}
+          {"command_type" => "Open3::Capture3", "args" => %w[echo external], "stdout" => "external\n",
+           "stderr" => "", "status" => 0, "recorded_at" => Time.now.iso8601}
         ]
       }
       File.write(record_path, new_data.to_yaml)
@@ -246,14 +245,14 @@ RSpec.describe Backspin::Record do
 
       record.next_command # Use the only command
 
-      expect {
+      expect do
         record.next_command
-      }.to raise_error(Backspin::NoMoreRecordingsError, /No more recordings available/)
+      end.to raise_error(Backspin::NoMoreRecordingsError, /No more recordings available/)
     end
 
     it "resets playback position when reloaded" do
       record.add_command(create_test_command("test"))
-      record.save  # Save to disk first
+      record.save # Save to disk first
       record.next_command # Use the command
 
       record.reload # This should reset position
@@ -281,7 +280,8 @@ RSpec.describe Backspin::Record do
         "format_version" => "2.0",
         "first_recorded_at" => "2024-01-01T00:00:00Z",
         "commands" => [
-          {"command_type" => "Open3::Capture3", "args" => ["echo", "existing"], "stdout" => "existing\n", "stderr" => "", "status" => 0, "recorded_at" => "2024-01-01T00:00:00Z"}
+          {"command_type" => "Open3::Capture3", "args" => %w[echo existing], "stdout" => "existing\n",
+           "stderr" => "", "status" => 0, "recorded_at" => "2024-01-01T00:00:00Z"}
         ]
       }.to_yaml)
 

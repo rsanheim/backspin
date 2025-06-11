@@ -29,8 +29,12 @@ bin/rake release     # Release to RubyGems (updates version, tags, pushes)
 
 ### Code Quality
 ```bash
-bin/rake standard               # Run Standard Ruby linter
+script/lint                      # Run Standard Ruby linter
+script/lint --fix                # Auto-fix linting issues
+bin/rake standard                # Alternative: Run via Rake task
 ```
+
+**Important**: Always use `standardrb` for linting, never use `rubocop` directly. The project uses Standard Ruby for consistent code style.
 
 ## Architecture
 

@@ -1,0 +1,13 @@
+---
+first_recorded_at: '2025-05-01T12:00:00Z'
+format_version: '2.0'
+commands:
+- command_type: Open3::Capture3
+  args:
+  - date
+  stdout: 'Tue Jun 10 22:42:37 CDT 2025
+
+    '
+  stderr: ''
+  status: 0
+  recorded_at: '2025-05-01T12:00:00Z'

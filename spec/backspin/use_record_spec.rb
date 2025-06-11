@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe "Backspin.run" do
@@ -44,27 +46,27 @@ RSpec.describe "Backspin.run" do
     end
 
     it "requires record name" do
-      expect {
+      expect do
         Backspin.run do
           Open3.capture3("echo auto-named")
         end
-      }.to raise_error(ArgumentError, "wrong number of arguments (given 0, expected 1..2)")
+      end.to raise_error(ArgumentError, "wrong number of arguments (given 0, expected 1..2)")
     end
 
     it "raises ArgumentError when record name is nil" do
-      expect {
+      expect do
         Backspin.run(nil) do
           Open3.capture3("echo test")
         end
-      }.to raise_error(ArgumentError, "record_name is required")
+      end.to raise_error(ArgumentError, "record_name is required")
     end
 
     it "raises ArgumentError when record name is empty" do
-      expect {
+      expect do
         Backspin.run("") do
           Open3.capture3("echo test")
         end
-      }.to raise_error(ArgumentError, "record_name is required")
+      end.to raise_error(ArgumentError, "record_name is required")
     end
 
     it "supports record modes" do
@@ -75,7 +77,7 @@ RSpec.describe "Backspin.run" do
 
       # Auto mode with existing file - verifies
       result = Backspin.run("modes_test") do
-        Open3.capture3("echo first")  # Must match recorded command for verification
+        Open3.capture3("echo first") # Must match recorded command for verification
       end
       expect(result.output[0]).to eq("first\n")
       expect(result.mode).to eq(:verify)
@@ -89,18 +91,18 @@ RSpec.describe "Backspin.run" do
 
       # Verify it was re-recorded - now verifies against "third"
       result = Backspin.run("modes_test") do
-        Open3.capture3("echo third")  # Must match new recording
+        Open3.capture3("echo third") # Must match new recording
       end
       expect(result.output[0]).to eq("third\n")
       expect(result.verified?).to eq(true)
     end
 
     it "supports :none mode - never record" do
-      expect {
+      expect do
         Backspin.run("none_mode_test", mode: :playback) do
           Open3.capture3("echo test")
         end
-      }.to raise_error(Backspin::RecordNotFoundError)
+      end.to raise_error(Backspin::RecordNotFoundError)
     end
 
     xit "supports :new_episodes mode - not supported in new API" do
@@ -108,6 +110,7 @@ RSpec.describe "Backspin.run" do
       # Keeping the test as a placeholder to document the removed functionality
     end
 
+    # TODO: remove this behavior and the spec?
     it "returns stdout, stderr, and status like capture3" do
       result = Backspin.run("full_output_test") do
         Open3.capture3("sh -c 'echo stdout; echo stderr >&2; exit 42'")
@@ -116,7 +119,7 @@ RSpec.describe "Backspin.run" do
       stdout, stderr, status = result.output
       expect(stdout).to eq("stdout\n")
       expect(stderr).to eq("stderr\n")
-      expect(status).to eq(42)
+      expect(status.exitstatus).to eq(42)
     end
 
     it "supports options hash" do
@@ -134,7 +137,7 @@ RSpec.describe "Backspin.run" do
   describe "block return values" do
     it "returns the value from the block" do
       result = Backspin.run("return_value_test") do
-        stdout, _, _ = Open3.capture3("echo test")
+        stdout, = Open3.capture3("echo test")
         "custom return: #{stdout.strip}"
       end
 
@@ -144,11 +147,11 @@ RSpec.describe "Backspin.run" do
 
   describe "error handling" do
     it "preserves exceptions from the block" do
-      expect {
+      expect do
         Backspin.run("exception_test") do
           raise "Something went wrong"
         end
-      }.to raise_error("Something went wrong")
+      end.to raise_error("Something went wrong")
     end
   end
 end

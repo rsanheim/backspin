@@ -4,13 +4,14 @@ module Backspin
   # Result object for all Backspin record operations
   # Provides a consistent interface whether recording, verifying, or playing back
   class RecordResult
-    attr_reader :output, :record_path, :commands, :mode, :command_diffs
+    attr_reader :output, :commands, :mode, :command_diffs
+    attr_reader :record
 
-    def initialize(output:, mode:, record_path:, commands:, verified: nil, command_diffs: nil)
+    def initialize(output:, mode:, record:, verified: nil, command_diffs: nil)
       @output = output
       @mode = mode
-      @record_path = record_path
-      @commands = commands
+      @record = record
+      @commands = record.commands
       @verified = verified
       @command_diffs = command_diffs || []
     end
@@ -20,8 +21,16 @@ module Backspin
       mode == :record
     end
 
+    def record_path
+      record.path
+    end
+
     # @return [Boolean, nil] true/false for verification results, nil for recording
     def verified?
+      return @verified unless mode == :verify
+
+      return false if command_diffs.size < commands.size
+
       @verified
     end
 
@@ -33,6 +42,12 @@ module Backspin
     # @return [String, nil] Human-readable error message if verification failed
     def error_message
       return nil unless verified? == false
+
+      # Check for command count mismatch first
+      if command_diffs.size < commands.size
+        return "Expected #{commands.size} commands but only #{command_diffs.size} were executed"
+      end
+
       return "No commands to verify" if command_diffs.empty?
 
       failed_diffs = command_diffs.reject(&:verified?)
@@ -130,24 +145,15 @@ module Backspin
         playback: playback?,
         stdout: stdout,
         stderr: stderr,
-        status: status,
-        record_path: record_path.to_s
+        status: status
       }
 
-      # Only include verified if it's not nil
       hash[:verified] = verified? unless verified?.nil?
-
-      # Only include diff if present
       hash[:diff] = diff if diff
-
       # Include number of failed commands if in verify mode
       hash[:failed_commands] = command_diffs.count { |d| !d.verified? } if mode == :verify && command_diffs.any?
 
       hash
-    end
-
-    def inspect
-      "#<Backspin::RecordResult mode=#{mode} verified=#{verified?.inspect} status=#{status}>"
     end
   end
 end

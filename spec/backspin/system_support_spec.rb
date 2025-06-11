@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe "Backspin system() support" do
@@ -15,7 +17,7 @@ RSpec.describe "Backspin system() support" do
 
       expect(result.commands.size).to eq(1)
       command = result.commands.first
-      expect(command.args).to eq(["echo", "hello"])
+      expect(command.args).to eq(%w[echo hello])
       # System calls don't capture stdout/stderr - they go directly to the terminal
       expect(command.stdout).to eq("")
       expect(command.stderr).to eq("")
@@ -41,9 +43,9 @@ RSpec.describe "Backspin system() support" do
       end
 
       expect(result.commands.size).to eq(2)
-      expect(result.commands[0].args).to eq(["echo", "first"])
+      expect(result.commands[0].args).to eq(%w[echo first])
       expect(result.commands[0].stdout).to eq("")
-      expect(result.commands[1].args).to eq(["echo", "second"])
+      expect(result.commands[1].args).to eq(%w[echo second])
       expect(result.commands[1].stdout).to eq("")
     end
   end
@@ -66,12 +68,12 @@ RSpec.describe "Backspin system() support" do
     it "detects non-matching system exit status" do
       # Record a successful command
       Backspin.run("verify_system_diff") do
-        system("true")  # exit status 0
+        system("true") # exit status 0
       end
 
       # Verify with a failing command - should fail
       result = Backspin.run("verify_system_diff") do
-        system("false")  # exit status 1
+        system("false") # exit status 1
       end
 
       expect(result.verified?).to be false
@@ -107,9 +109,9 @@ RSpec.describe "Backspin system() support" do
       expect(result.commands.size).to eq(2)
       expect(result.output).to eq("hello")
       expect(result.commands[0].method_class.name).to eq("Kernel::System")
-      expect(result.commands[0].stdout).to eq("")  # System calls don't capture stdout
+      expect(result.commands[0].stdout).to eq("") # System calls don't capture stdout
       expect(result.commands[1].method_class.name).to eq("Open3::Capture3")
-      expect(result.commands[1].stdout).to eq("from capture3\n")  # But capture3 does
+      expect(result.commands[1].stdout).to eq("from capture3\n") # But capture3 does
     end
   end
 end

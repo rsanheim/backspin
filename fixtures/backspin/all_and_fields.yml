@@ -1,0 +1,15 @@
+---
+first_recorded_at: '2025-06-10T11:27:40-05:00'
+format_version: '2.0'
+commands:
+- command_type: Open3::Capture3
+  args:
+  - sh
+  - "-c"
+  - echo 'valid'; exit 0
+  stdout: 'valid
+
+    '
+  stderr: ''
+  status: 0
+  recorded_at: '2025-06-10T11:27:40-05:00'
