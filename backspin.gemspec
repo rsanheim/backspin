@@ -26,6 +26,6 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "ostruct", "~> 0.5.0"
-  spec.add_dependency "rspec-mocks", "~> 3.0"
+  spec.add_dependency "ostruct"
+  spec.add_dependency "rspec-mocks", "~> 3"
 end

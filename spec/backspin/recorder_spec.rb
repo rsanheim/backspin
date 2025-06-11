@@ -25,7 +25,7 @@ RSpec.describe Backspin::Recorder do
       end
 
       it "verifies matching output successfully" do
-        recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
+        recorder = Backspin::Recorder.new(mode: :verify, record: record)
 
         result = recorder.perform_verification do
           Open3.capture3("echo", "hello")
@@ -39,7 +39,7 @@ RSpec.describe Backspin::Recorder do
       end
 
       it "fails verification when output doesn't match" do
-        recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
+        recorder = Backspin::Recorder.new(mode: :verify, record: record)
 
         result = recorder.perform_verification do
           Open3.capture3("echo", "goodbye")
@@ -51,7 +51,7 @@ RSpec.describe Backspin::Recorder do
       end
 
       it "raises error when executing more commands than recorded" do
-        recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
+        recorder = Backspin::Recorder.new(mode: :verify, record: record)
 
         expect do
           recorder.perform_verification do
@@ -73,7 +73,7 @@ RSpec.describe Backspin::Recorder do
         ))
         record.save
 
-        recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
+        recorder = Backspin::Recorder.new(mode: :verify, record: record)
 
         result = recorder.perform_verification do
           Open3.capture3("echo", "hello")
@@ -106,7 +106,7 @@ RSpec.describe Backspin::Recorder do
         recorder = Backspin::Recorder.new(
           mode: :verify,
           record: record,
-          options: {matcher: custom_matcher}
+          matcher: custom_matcher
         )
 
         result = recorder.perform_verification do
@@ -120,9 +120,7 @@ RSpec.describe Backspin::Recorder do
         recorder = Backspin::Recorder.new(
           mode: :verify,
           record: record,
-          options: {
-            matcher: {stdout: ->(_recorded, actual) { actual.include?("20") }}
-          }
+          matcher: {stdout: ->(_recorded, actual) { actual.include?("20") }}
         )
 
         result = recorder.perform_verification do
@@ -148,7 +146,7 @@ RSpec.describe Backspin::Recorder do
       end
 
       it "verifies system command success" do
-        recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
+        recorder = Backspin::Recorder.new(mode: :verify, record: record)
 
         result = recorder.perform_verification do
           system("true")
@@ -171,7 +169,7 @@ RSpec.describe Backspin::Recorder do
         ))
         record.save
 
-        recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
+        recorder = Backspin::Recorder.new(mode: :verify, record: record)
 
         result = recorder.perform_verification do
           system("false")
@@ -212,7 +210,7 @@ RSpec.describe Backspin::Recorder do
       end
 
       it "verifies mixed command types in correct order" do
-        recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
+        recorder = Backspin::Recorder.new(mode: :verify, record: record)
 
         result = recorder.perform_verification do
           Open3.capture3("echo", "first")
@@ -226,7 +224,7 @@ RSpec.describe Backspin::Recorder do
       end
 
       it "fails verification when command types don't match" do
-        recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
+        recorder = Backspin::Recorder.new(mode: :verify, record: record)
 
         # When we execute a system command but the recording expects capture3,
         # the verification will fail with a count mismatch because the capture3
@@ -243,7 +241,7 @@ RSpec.describe Backspin::Recorder do
     context "error handling" do
       it "raises error when record doesn't exist" do
         non_existent_record = Backspin::Record.new("non_existent.yml")
-        recorder = Backspin::Recorder.new(mode: :verify, record: non_existent_record, options: {})
+        recorder = Backspin::Recorder.new(mode: :verify, record: non_existent_record)
 
         expect do
           recorder.perform_verification {}
@@ -252,7 +250,7 @@ RSpec.describe Backspin::Recorder do
 
       it "raises error when record has no commands" do
         record.save # Save empty record
-        recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
+        recorder = Backspin::Recorder.new(mode: :verify, record: record)
 
         expect do
           recorder.perform_verification {}

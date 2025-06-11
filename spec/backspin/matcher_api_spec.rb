@@ -45,21 +45,18 @@ RSpec.describe "Backspin unified matcher functionality" do
       expect(result.verified?).to be false
     end
 
-    it "uses exact equality for non-matched fields" do
+    it "only checks fields with matchers (override behavior)" do
       Backspin.run("match_on_other_fields") do
         Open3.capture3("sh -c 'echo output; echo error >&2; exit 1'")
       end
 
-      # Match stdout but stderr must be exact
+      # Only stdout is checked - stderr and status differences are ignored
       result = Backspin.run("match_on_other_fields",
         matcher: {stdout: ->(_recorded, _actual) { true }}) do
         Open3.capture3("sh -c 'echo different; echo other_error >&2; exit 1'")
       end
 
-      expect(result.verified?).to be false
-      expect(result.diff).to include("stderr diff:")
-      expect(result.diff).to include("-error")
-      expect(result.diff).to include("+other_error")
+      expect(result.verified?).to be true  # Now passes because only stdout is checked
     end
   end
 
@@ -221,7 +218,7 @@ RSpec.describe "Backspin unified matcher functionality" do
       expect(result2.verified?).to be false
     end
 
-    it "checks both :all and field matchers independently" do
+    it "runs all provided matchers" do
       matchers_called = []
 
       # Record
@@ -245,8 +242,8 @@ RSpec.describe "Backspin unified matcher functionality" do
       end
 
       expect(result.verified?).to be false
-      # Both matchers are called (no short-circuit)
-      expect(matchers_called).to eq(%i[all stdout])
+      # Both matchers are called (order may vary due to hash iteration)
+      expect(matchers_called.sort).to eq(%i[all stdout])
     end
   end
 
@@ -283,7 +280,7 @@ RSpec.describe "Backspin unified matcher functionality" do
       expect(matchers_called).to eq(%i[all stdout stderr])
     end
 
-    it "always checks exact equality for unspecified fields, even when :all is present" do
+    it "only checks provided matchers (override behavior)" do
       # Record specific output
       Backspin.run("all_checks_equality", mode: :record) do
         Open3.capture3("sh", "-c", "echo 'original'; echo 'original error' >&2")
@@ -299,12 +296,11 @@ RSpec.describe "Backspin unified matcher functionality" do
         Open3.capture3("sh", "-c", "echo 'original'; echo 'DIFFERENT ERROR' >&2")
       end
 
-      # This now fails because:
+      # With new behavior:
       # 1. :all returned true
       # 2. stdout matcher passed
-      # 3. stderr is different and exact equality is ALWAYS checked for unmatched fields
-      expect(result.verified?).to be false
-      expect(result.error_message).to include("stderr differs")
+      # 3. stderr is NOT checked because no stderr matcher was provided
+      expect(result.verified?).to be true
     end
 
     it "fails when :all passes but a field matcher fails" do

@@ -6,8 +6,8 @@ source "https://rubygems.org"
 gemspec
 
 group :development do
-  gem "rake", "~> 13.0"
-  gem "rspec", "~> 3.0"
+  gem "rake", "~> 13"
+  gem "rspec", "~> 3"
   gem "standard"
   gem "timecop", "~> 0.9"
 end
