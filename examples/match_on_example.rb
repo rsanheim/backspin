@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 require "bundler/inline"
 require "open3"
 
@@ -22,7 +24,7 @@ sleep 1
 
 # Second run: Verify with custom matcher
 result = Backspin.run("timestamp_example",
-  match_on: [:stdout, ->(recorded, actual) {
+  match_on: [:stdout, lambda { |recorded, actual|
     # Both should have the same date format
     recorded.match?(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/) &&
     actual.match?(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)
@@ -51,11 +53,11 @@ end
 # Verify with different PID and timestamp
 result = Backspin.run("multi_field_example",
   match_on: [
-    [:stdout, ->(recorded, actual) {
+    [:stdout, lambda { |recorded, actual|
       # Both should have PID format
       recorded.match?(/PID: \d+/) && actual.match?(/PID: \d+/)
     }],
-    [:stderr, ->(recorded, actual) {
+    [:stderr, lambda { |recorded, actual|
       # Both should have timeout error, ignore timestamp
       recorded.match?(/Error: Timeout at/) && actual.match?(/Error: Timeout at/)
     }]
@@ -90,14 +92,14 @@ end
 
 # Verify - stdout uses custom matcher, stderr must match exactly
 result = Backspin.run("mixed_matching",
-  match_on: [:stdout, ->(recorded, actual) {
+  match_on: [:stdout, lambda { |recorded, actual|
     # Version and Status must match, Build can differ
     recorded_lines = recorded.lines
     actual_lines = actual.lines
 
-    recorded_lines[0] == actual_lines[0] &&  # Version line must match
-    recorded_lines[1].start_with?("Build:") && actual_lines[1].start_with?("Build:") &&  # Build line format
-    recorded_lines[2] == actual_lines[2]  # Status line must match
+    recorded_lines[0] == actual_lines[0] && # Version line must match
+    recorded_lines[1].start_with?("Build:") && actual_lines[1].start_with?("Build:") && # Build line format
+    recorded_lines[2] == actual_lines[2] # Status line must match
   }]) do
   script = <<~BASH
     echo "Version: 1.2.3"

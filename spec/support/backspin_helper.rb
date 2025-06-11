@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module BackspinHelper
   # Static timestamp to keep record timestamps consistent
   def static_time

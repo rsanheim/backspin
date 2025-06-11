@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe "Backspin filtering support" do
@@ -14,7 +16,7 @@ RSpec.describe "Backspin filtering support" do
   describe "Backspin.run with filter in record mode" do
     it "applies filter to recorded output before saving" do
       # Filter that normalizes timestamps in the format YYYY-MM-DD HH:MM:SS
-      timestamp_filter = ->(data) {
+      timestamp_filter = lambda { |data|
         data["stdout"] = data["stdout"].gsub(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/, "TIMESTAMP")
         data
       }
@@ -32,9 +34,9 @@ RSpec.describe "Backspin filtering support" do
     end
 
     it "applies filter to remove absolute paths" do
-      path_filter = ->(data) {
+      path_filter = lambda { |data|
         # Normalize paths like /Users/username/project to PROJECT_ROOT
-        data["stdout"] = data["stdout"].gsub(/\/Users\/\w+\/\w+/, "PROJECT_ROOT")
+        data["stdout"] = data["stdout"].gsub(%r{/Users/\w+/\w+}, "PROJECT_ROOT")
         data
       }
 
@@ -48,7 +50,7 @@ RSpec.describe "Backspin filtering support" do
     end
 
     it "applies filter to multiple commands" do
-      counter_filter = ->(data) {
+      counter_filter = lambda { |data|
         # Replace any number with X
         data["stdout"] = data["stdout"].gsub(/\d+/, "X")
         data
@@ -67,7 +69,7 @@ RSpec.describe "Backspin filtering support" do
 
     it "filter receives full command data including stderr and status" do
       received_data = nil
-      inspection_filter = ->(data) {
+      inspection_filter = lambda { |data|
         received_data = data.dup
         data
       }
@@ -89,7 +91,7 @@ RSpec.describe "Backspin filtering support" do
 
   describe "Backspin.run with filter and different modes" do
     it "applies filter when recording (auto mode)" do
-      filter = ->(data) {
+      filter = lambda { |data|
         data["stdout"] = data["stdout"].upcase
         data
       }
@@ -115,7 +117,7 @@ RSpec.describe "Backspin filtering support" do
 
     it "applies filter with explicit record mode" do
       call_count = 0
-      dynamic_filter = ->(data) {
+      dynamic_filter = lambda { |data|
         call_count += 1
         data["stdout"] = "filtered output #{call_count}\n"
         data
@@ -138,7 +140,7 @@ RSpec.describe "Backspin filtering support" do
     end
 
     it "applies filter with multiple commands in a single recording" do
-      episode_filter = ->(data) {
+      episode_filter = lambda { |data|
         data["stdout"] = data["stdout"].gsub("episode", "EPISODE")
         data
       }
@@ -164,7 +166,7 @@ RSpec.describe "Backspin filtering support" do
       end
 
       # Try to use with filter in playback mode - filter should be ignored
-      result = Backspin.run("none_mode_test", mode: :playback, filter: ->(d) {
+      result = Backspin.run("none_mode_test", mode: :playback, filter: lambda { |d|
         d["stdout"] = "FILTERED"
         d
       }) do
@@ -179,7 +181,7 @@ RSpec.describe "Backspin filtering support" do
   describe "filter edge cases" do
     it "handles nil filter gracefully" do
       Backspin.run("nil_filter", mode: :record, filter: nil) do
-        output, _, _ = Open3.capture3("echo 'test'")
+        output, = Open3.capture3("echo 'test'")
         expect(output).to eq("test\n")
       end
 
@@ -189,7 +191,7 @@ RSpec.describe "Backspin filtering support" do
     end
 
     it "filter can modify multiple fields" do
-      multi_field_filter = ->(data) {
+      multi_field_filter = lambda { |data|
         data["stdout"] = "modified stdout"
         data["stderr"] = "modified stderr"
         data["status"] = 0
@@ -211,7 +213,7 @@ RSpec.describe "Backspin filtering support" do
     it "preserves credential scrubbing when filter is applied" do
       Backspin.configuration.scrub_credentials = true
 
-      filter = ->(data) {
+      filter = lambda { |data|
         # Filter just uppercases, credential scrubbing should still happen
         data["stdout"] = data["stdout"].upcase
         data

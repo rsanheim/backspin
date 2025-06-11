@@ -93,7 +93,6 @@ module Backspin
       scrubbed = text.dup
       configuration.credential_patterns.each do |pattern|
         scrubbed.gsub!(pattern) do |match|
-          # Replace with asterisks of the same length
           "*" * match.length
         end
       end
@@ -110,6 +109,8 @@ module Backspin
     #   - Proc: ->(recorded, actual) { ... } for full command matching
     #   - Hash: { stdout: ->(recorded, actual) { ... }, stderr: ->(recorded, actual) { ... } } for field-specific matching
     #   - Hash with :all key: { all: ->(recorded, actual) { ... }, stdout: ->(recorded, actual) { ... } } for combined matching
+    #     When both :all and field matchers are present, both must pass for verification to succeed.
+    #     Fields without specific matchers always use exact equality, regardless of :all presence.
     # @return [RecordResult] Result object with output and status
     def run(record_name, options = {}, &block)
       raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
@@ -153,7 +154,7 @@ module Backspin
 
       if result.verified? == false
         error_message = "Backspin verification failed!\n"
-        error_message += "Record: #{result.record_path}\n"
+        error_message += "Record: #{result.record.path}\n"
 
         # Use the error_message from the result which is now properly formatted
         error_message += "\n#{result.error_message}" if result.error_message

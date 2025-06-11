@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe "Backspin multi-command support" do
@@ -13,13 +15,13 @@ RSpec.describe "Backspin multi-command support" do
 
       # First run: record multiple commands
       Backspin.run(record_name) do
-        stdout1, _, _ = Open3.capture3("echo command1")
+        stdout1, = Open3.capture3("echo command1")
         expect(stdout1).to eq("command1\n")
 
-        stdout2, _, _ = Open3.capture3("echo command2")
+        stdout2, = Open3.capture3("echo command2")
         expect(stdout2).to eq("command2\n")
 
-        stdout3, _, _ = Open3.capture3("echo command3")
+        stdout3, = Open3.capture3("echo command3")
         expect(stdout3).to eq("command3\n")
       end
 
@@ -32,22 +34,22 @@ RSpec.describe "Backspin multi-command support" do
       expect(record_data["format_version"]).to eq("2.0")
       expect(record_data["commands"]).to be_an(Array)
       expect(record_data["commands"].size).to eq(3)
-      expect(record_data["commands"].map { |cmd| cmd["stdout"] }).to eq(["command1\n", "command2\n", "command3\n"])
+      expect(record_data["commands"].map { |cmd| cmd["stdout"] }).to eq(%W[command1\n command2\n command3\n])
 
       # Second run: replay from record
       replay_outputs = []
       Backspin.run(record_name) do
-        stdout1, _, _ = Open3.capture3("echo command1")
+        stdout1, = Open3.capture3("echo command1")
         replay_outputs << stdout1
 
-        stdout2, _, _ = Open3.capture3("echo command2")
+        stdout2, = Open3.capture3("echo command2")
         replay_outputs << stdout2
 
-        stdout3, _, _ = Open3.capture3("echo command3")
+        stdout3, = Open3.capture3("echo command3")
         replay_outputs << stdout3
       end
 
-      expect(replay_outputs).to eq(["command1\n", "command2\n", "command3\n"])
+      expect(replay_outputs).to eq(%W[command1\n command2\n command3\n])
     end
 
     it "handles mixed commands with different outputs" do
@@ -96,13 +98,13 @@ RSpec.describe "Backspin multi-command support" do
       end
 
       # Try to replay 3 commands - should fail on the third
-      expect {
+      expect do
         Backspin.run(record_name) do
           Open3.capture3("echo first")
           Open3.capture3("echo second")
-          Open3.capture3("echo third")  # This should fail
+          Open3.capture3("echo third") # This should fail
         end
-      }.to raise_error(Backspin::RecordNotFoundError, /No more recorded commands/)
+      end.to raise_error(Backspin::RecordNotFoundError, /No more recorded commands/)
     end
 
     it "saves single commands as arrays for consistency" do
@@ -110,7 +112,7 @@ RSpec.describe "Backspin multi-command support" do
 
       # Record single command (should save as array)
       Backspin.run(record_name) do
-        stdout, _, _ = Open3.capture3("echo single")
+        stdout, = Open3.capture3("echo single")
         expect(stdout).to eq("single\n")
       end
 
@@ -125,7 +127,7 @@ RSpec.describe "Backspin multi-command support" do
 
       # Should still replay correctly
       Backspin.run(record_name) do
-        stdout, _, _ = Open3.capture3("echo single")
+        stdout, = Open3.capture3("echo single")
         expect(stdout).to eq("single\n")
       end
     end

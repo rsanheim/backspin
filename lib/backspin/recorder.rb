@@ -12,21 +12,19 @@ module Backspin
     include RSpec::Mocks::ExampleMethods
     SUPPORTED_COMMAND_TYPES = %i[capture3 system].freeze
 
-    attr_reader :commands, :verification_data, :mode, :record, :options
+    attr_reader :commands, :mode, :record, :options
 
     def initialize(mode: :record, record: nil, options: {})
       @mode = mode
       @record = record
       @options = options
       @commands = []
-      @verification_data = {}
       @playback_index = 0
       @command_diffs = []
     end
 
     def setup_recording_stubs(*command_types)
       command_types = SUPPORTED_COMMAND_TYPES if command_types.empty?
-
       command_types.each do |command_type|
         record_call(command_type)
       end
@@ -48,7 +46,7 @@ module Backspin
     def perform_recording
       result = yield
       record.save(filter: options[:filter])
-      RecordResult.new(output: result, mode: :record, record_path: record.path, commands: record.commands)
+      RecordResult.new(output: result, mode: :record, record: record, commands: record.commands)
     end
 
     # Performs verification by executing commands and comparing with recorded values
@@ -68,13 +66,8 @@ module Backspin
           raise RecordNotFoundError, "No more recorded commands, but tried to execute: #{args.inspect}"
         end
 
-        if recorded_command.method_class != Open3::Capture3
-          raise RecordNotFoundError, "Expected #{recorded_command.method_class.name} but got Open3.capture3"
-        end
-
         stdout, stderr, status = original_method.call(*args)
 
-        # TODO: should we store the actual commands as well to make it easier to diff / compare / etc?
         actual_command = Command.new(
           method_class: Open3::Capture3,
           args: args,
@@ -83,12 +76,7 @@ module Backspin
           status: status.exitstatus
         )
 
-        @command_diffs << CommandDiff.new(
-          recorded_command: recorded_command,
-          actual_result: actual_command.result,
-          matcher: options[:matcher]
-        )
-
+        @command_diffs << CommandDiff.new(recorded_command: recorded_command, actual_command: actual_command, matcher: options[:matcher])
         @command_index += 1
         [stdout, stderr, status]
       end
@@ -97,28 +85,18 @@ module Backspin
       allow_any_instance_of(Object).to receive(:system).and_wrap_original do |original_method, receiver, *args|
         recorded_command = record.commands[@command_index]
 
-        if recorded_command.nil?
-          raise RecordNotFoundError, "No more recorded commands, but tried to execute: system #{args.inspect}"
-        end
-
-        if recorded_command.method_class != ::Kernel::System
-          raise RecordNotFoundError, "Expected #{recorded_command.method_class.name} but got system"
-        end
-
         result = original_method.call(receiver, *args)
 
-        actual_result = CommandResult.new(
+        actual_command = Command.new(
+          method_class: ::Kernel::System,
+          args: args,
           stdout: "",
           stderr: "",
           status: result ? 0 : 1
         )
 
         # Create CommandDiff to track the comparison
-        @command_diffs << CommandDiff.new(
-          recorded_command: recorded_command,
-          actual_result: actual_result,
-          matcher: options[:matcher]
-        )
+        @command_diffs << CommandDiff.new(recorded_command: recorded_command, actual_command: actual_command, matcher: options[:matcher])
 
         @command_index += 1
         result
@@ -126,19 +104,13 @@ module Backspin
 
       output = yield
 
-      # Check if all commands were executed
-      if @command_index < record.commands.size
-        raise RecordNotFoundError, "Expected #{record.commands.size} commands but only #{@command_index} were executed"
-      end
-
-      # Overall verification status
       all_verified = @command_diffs.all?(&:verified?)
 
       RecordResult.new(
         output: output,
         mode: :verify,
         verified: all_verified,
-        record_path: record.path,
+        record: record,
         commands: record.commands,
         command_diffs: @command_diffs
       )
@@ -150,7 +122,8 @@ module Backspin
       raise RecordNotFoundError, "No commands found in record" if record.empty?
 
       # Setup replay stubs
-      setup_replay_stubs
+      setup_capture3_replay_stub
+      setup_system_replay_stub
 
       # Execute block (all commands will be stubbed with recorded values)
       output = yield
@@ -159,17 +132,9 @@ module Backspin
         output: output,
         mode: :playback,
         verified: true, # Always true for playback
-        record_path: record.path,
+        record: record,
         commands: record.commands
       )
-    end
-
-    # Setup stubs for replay mode - returns recorded values for multiple commands
-    def setup_replay_stubs
-      raise ArgumentError, "Record required for replay mode" unless @record
-
-      setup_capture3_replay_stub
-      setup_system_replay_stub
     end
 
     private
@@ -177,11 +142,6 @@ module Backspin
     def setup_capture3_replay_stub
       allow(Open3).to receive(:capture3) do |*_args|
         command = @record.next_command
-
-        # Make sure this is a capture3 command
-        unless command.method_class == Open3::Capture3
-          raise RecordNotFoundError, "Expected Open3::Capture3 command but got #{command.method_class.name}"
-        end
 
         recorded_stdout = command.stdout
         recorded_stderr = command.stderr
@@ -196,10 +156,6 @@ module Backspin
     def setup_system_replay_stub
       allow_any_instance_of(Object).to receive(:system) do |_receiver, *_args|
         command = @record.next_command
-
-        unless command.method_class == ::Kernel::System
-          raise RecordNotFoundError, "Expected Kernel::System command but got #{command.method_class.name}"
-        end
 
         command.status.zero?
       rescue NoMoreRecordingsError => e

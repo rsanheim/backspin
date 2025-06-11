@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe Backspin::Recorder do
@@ -12,7 +14,7 @@ RSpec.describe Backspin::Recorder do
       before do
         recorded_command = Backspin::Command.new(
           method_class: Open3::Capture3,
-          args: ["echo", "hello"],
+          args: %w[echo hello],
           stdout: "hello\n",
           stderr: "",
           status: 0,
@@ -51,19 +53,19 @@ RSpec.describe Backspin::Recorder do
       it "raises error when executing more commands than recorded" do
         recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
 
-        expect {
+        expect do
           recorder.perform_verification do
             Open3.capture3("echo", "hello")
             Open3.capture3("echo", "extra")
           end
-        }.to raise_error(Backspin::RecordNotFoundError, /No more recorded commands/)
+        end.to raise_error(Backspin::RecordNotFoundError, /No more recorded commands/)
       end
 
-      it "raises error when executing fewer commands than recorded" do
+      it "fails verification when executing fewer commands than recorded" do
         # Add a second command to the record
         record.add_command(Backspin::Command.new(
           method_class: Open3::Capture3,
-          args: ["echo", "world"],
+          args: %w[echo world],
           stdout: "world\n",
           stderr: "",
           status: 0,
@@ -73,11 +75,12 @@ RSpec.describe Backspin::Recorder do
 
         recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
 
-        expect {
-          recorder.perform_verification do
-            Open3.capture3("echo", "hello")
-          end
-        }.to raise_error(Backspin::RecordNotFoundError, /Expected 2 commands but only 1 were executed/)
+        result = recorder.perform_verification do
+          Open3.capture3("echo", "hello")
+        end
+
+        expect(result.verified?).to be false
+        expect(result.error_message).to eq("Expected 2 commands but only 1 were executed")
       end
     end
 
@@ -96,7 +99,7 @@ RSpec.describe Backspin::Recorder do
       end
 
       it "uses custom matcher for verification" do
-        custom_matcher = ->(recorded, actual) {
+        custom_matcher = lambda { |_recorded, actual|
           # Check that actual stdout contains a year starting with 20
           actual["stdout"].include?("20")
         }
@@ -113,12 +116,12 @@ RSpec.describe Backspin::Recorder do
         expect(result.verified?).to be true
       end
 
-      it "uses match_on for field-specific matching" do
+      it "uses field-specific matching" do
         recorder = Backspin::Recorder.new(
           mode: :verify,
           record: record,
           options: {
-            match_on: [:stdout, ->(recorded, actual) { actual.include?("20") }]
+            matcher: {stdout: ->(_recorded, actual) { actual.include?("20") }}
           }
         )
 
@@ -152,7 +155,7 @@ RSpec.describe Backspin::Recorder do
         end
 
         expect(result.verified?).to be true
-        expect(result.command_diffs.first.actual_result.status).to eq(0)
+        expect(result.command_diffs.first.actual_command.status).to eq(0)
       end
 
       it "verifies system command failure" do
@@ -175,7 +178,7 @@ RSpec.describe Backspin::Recorder do
         end
 
         expect(result.verified?).to be true
-        expect(result.command_diffs.first.actual_result.status).to eq(1)
+        expect(result.command_diffs.first.actual_command.status).to eq(1)
       end
     end
 
@@ -183,7 +186,7 @@ RSpec.describe Backspin::Recorder do
       before do
         record.add_command(Backspin::Command.new(
           method_class: Open3::Capture3,
-          args: ["echo", "first"],
+          args: %w[echo first],
           stdout: "first\n",
           stderr: "",
           status: 0,
@@ -199,7 +202,7 @@ RSpec.describe Backspin::Recorder do
         ))
         record.add_command(Backspin::Command.new(
           method_class: Open3::Capture3,
-          args: ["echo", "last"],
+          args: %w[echo last],
           stdout: "last\n",
           stderr: "",
           status: 0,
@@ -222,14 +225,18 @@ RSpec.describe Backspin::Recorder do
         expect(result.command_diffs.all?(&:verified?)).to be true
       end
 
-      it "raises error when command types don't match" do
+      it "fails verification when command types don't match" do
         recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
 
-        expect {
-          recorder.perform_verification do
-            system("echo", "first") # Wrong type - should be capture3
-          end
-        }.to raise_error(Backspin::RecordNotFoundError, /Expected.*Capture3.*but got system/)
+        # When we execute a system command but the recording expects capture3,
+        # the verification will fail with a count mismatch because the capture3
+        # stub won't be triggered
+        result = recorder.perform_verification do
+          system("echo", "first") # Wrong type - should be capture3
+        end
+
+        expect(result.verified?).to be false
+        expect(result.error_message).to eq("Expected 3 commands but only 1 were executed")
       end
     end
 
@@ -238,18 +245,18 @@ RSpec.describe Backspin::Recorder do
         non_existent_record = Backspin::Record.new("non_existent.yml")
         recorder = Backspin::Recorder.new(mode: :verify, record: non_existent_record, options: {})
 
-        expect {
+        expect do
           recorder.perform_verification {}
-        }.to raise_error(Backspin::RecordNotFoundError, /Record not found/)
+        end.to raise_error(Backspin::RecordNotFoundError, /Record not found/)
       end
 
       it "raises error when record has no commands" do
         record.save # Save empty record
         recorder = Backspin::Recorder.new(mode: :verify, record: record, options: {})
 
-        expect {
+        expect do
           recorder.perform_verification {}
-        }.to raise_error(Backspin::RecordNotFoundError, /No commands found in record/)
+        end.to raise_error(Backspin::RecordNotFoundError, /No commands found in record/)
       end
     end
   end
