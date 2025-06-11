@@ -7,7 +7,7 @@ bump:
 
 tag:
   tag: v%{version}
-  sign: false
+  sign: true
 
 release:
   host: https://rubygems.org
