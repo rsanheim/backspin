@@ -16,7 +16,7 @@ namespace :release do
     puts "\nReleasing #{level} version..."
 
     # Use gem-release to bump, tag, and release to rubygems and github
-    sh "gem bump --version #{level} --push --sign --tag --release"
+    sh "gem bump --version #{level} --push --sign --tag"
     sh "gem release --github --push"
   end
 
