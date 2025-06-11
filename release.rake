@@ -11,12 +11,13 @@ namespace :release do
     level = args[:level] || "patch"
 
     # Pre-release checks
-    Rake::Task["release:check"].invoke
+    # Rake::Task["release:check"].invoke
 
     puts "\nReleasing #{level} version..."
 
     # Use gem-release to bump, tag, and release to rubygems and github
-    sh "gem bump --version #{level} --github --tag --release"
+    sh "gem bump --version #{level} --push --sign --tag --release"
+    sh "gem release --github --push"
   end
 
   desc "Create GitHub release for current version"

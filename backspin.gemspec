@@ -28,5 +28,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "ostruct", "~> 0.5.0"
   spec.add_dependency "rspec-mocks", "~> 3.0"
 
-  spec.add_development_dependency "gem-release", "~> 2.2"
+  spec.add_development_dependency "gem-release", "~> 2"
 end
