@@ -98,15 +98,8 @@ RSpec.describe "Backspin unified matcher functionality" do
         Open3.capture3("sh -c 'echo good; echo good >&2'")
       end
 
-      pp result
-      pp result.error_message
-      pp result.all_stderr
       diff = result.command_diffs.first
-      pp diff.diff
-      pp diff.recorded_command.class
-      pp diff.actual_command.class
-      pp diff.recorded_command.stderr
-      pp diff.actual_command.stderr
+      expect(diff.diff).to include("stderr diff:")
       expect(result.verified?).to be false
     end
   end
