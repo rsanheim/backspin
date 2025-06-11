@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0 - 2025-06-11
+* Simplify matcher API so user provided matchers override defaults - [#14](https://github.com/rsanheim/backspin/pull/14)
+* Also extract a proper `Matcher` object
+
 ## 0.4.2 - 2025-06-10
 Unified `:match` API for customizing how actual commands are matched against recorded commands. - [#11](https://github.com/rsanheim/backspin/pull/11)
 
