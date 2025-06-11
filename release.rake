@@ -17,7 +17,6 @@ namespace :release do
 
     # Use gem-release to bump, tag, and release to rubygems and github
     sh "gem bump --version #{level} --github --tag --release"
-
   end
 
   desc "Create GitHub release for current version"
@@ -67,13 +66,12 @@ namespace :release do
     if current_branch != "main"
       puts "⚠ Not on main branch (currently on #{current_branch})"
       print "Continue anyway? (y/N): "
-      response = STDIN.gets.chomp
+      response = $stdin.gets.chomp
       errors << "Not on main branch" unless response.downcase == "y"
     else
       puts "✓ On main branch"
     end
 
-    # Abort if there are errors
     unless errors.empty?
       puts "\n❌ Cannot release:"
       errors.each { |e| puts "  - #{e}" }
