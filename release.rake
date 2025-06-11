@@ -23,12 +23,13 @@ namespace :release do
     sh "git commit -am 'Bump version to #{new_version}'"
     sh "git push"
 
-    sh "gem release --tag --github --push"
+    sh "gem release --tag --push"
+    Rake::Task["release:github"].invoke(new_version)
   end
 
-  desc "Create GitHub release for current version"
-  task :github do
-    version = Backspin::VERSION
+  desc "Create GitHub release for specified version or current version"
+  task :github, [:version] do |t, args|
+    version = args[:version] || Backspin::VERSION
 
     if system("which gh > /dev/null 2>&1")
       puts "\nCreating GitHub release for v#{version}..."
