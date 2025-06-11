@@ -16,8 +16,14 @@ namespace :release do
     puts "\nReleasing #{level} version..."
 
     # Use gem-release to bump, tag, and release to rubygems and github
-    sh "gem bump --version #{level} --push --sign --tag"
-    sh "gem release --github --push"
+    sh "gem bump --version #{level}"
+    new_version = File.read("lib/backspin/version.rb").match(/VERSION = "(\d+\.\d+\.\d+)"/)[1]
+
+    sh "bundle install"
+    sh "git commit -am 'Bump version to #{new_version}'"
+    sh "git push"
+
+    sh "gem release --tag --github --push"
   end
 
   desc "Create GitHub release for current version"
