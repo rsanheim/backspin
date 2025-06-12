@@ -321,7 +321,7 @@ RSpec.describe "Backspin unified matcher functionality" do
       logged_data = []
 
       # Record
-      Backspin.run("all_for_logging", mode: :record) do
+      Backspin.run("all_for_logging") do
         Open3.capture3("date")
       end
 
