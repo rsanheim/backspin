@@ -180,7 +180,6 @@ RSpec.describe "Backspin unified matcher functionality" do
     end
 
     it "can implement custom verification logic across all fields" do
-      # Record a command with specific output
       Backspin.run("all_matcher_custom", mode: :record) do
         Open3.capture3("sh", "-c", "echo 'PASS: test 1'; echo 'WARNING: minor issue' >&2")
       end
@@ -244,7 +243,6 @@ RSpec.describe "Backspin unified matcher functionality" do
     it "checks both :all and field-specific matchers when both are present" do
       matchers_called = []
 
-      # Record
       Backspin.run("all_with_fields", mode: :record) do
         Open3.capture3("sh", "-c", "echo 'output'; echo 'error' >&2")
       end
@@ -274,7 +272,6 @@ RSpec.describe "Backspin unified matcher functionality" do
     end
 
     it "only checks provided matchers (override behavior)" do
-      # Record specific output
       Backspin.run("all_checks_equality", mode: :record) do
         Open3.capture3("sh", "-c", "echo 'original'; echo 'original error' >&2")
       end
@@ -320,12 +317,10 @@ RSpec.describe "Backspin unified matcher functionality" do
     it "can use :all for logging/debugging while field matchers do actual verification" do
       logged_data = []
 
-      # Record
       Backspin.run("all_for_logging") do
         Open3.capture3("date")
       end
 
-      # Use :all for side effects like logging
       result = Backspin.run("all_for_logging", mode: :verify,
         matcher: {
           all: lambda { |_recorded, actual|
