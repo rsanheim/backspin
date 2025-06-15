@@ -90,39 +90,29 @@ RSpec.describe Backspin do
     end
   end
 
-  context "capture" do
-    it "captures stdout and stderr from anything in the block (regardless of how called)"
+  context "run with invalid args" do
+    it "raises ArgumentError when no record name is provided" do
+      expect do
+        Backspin.run do
+          Open3.capture3("echo hello")
+        end
+      end.to raise_error(ArgumentError, /wrong number of arguments/)
+    end
 
-    it "records to a record file with stdout and stderr, command_type: 'backspin-capturer'"
+    it "raises ArgumentError when record name is nil" do
+      expect do
+        Backspin.run(nil, mode: :record) do
+          Open3.capture3("echo hello")
+        end
+      end.to raise_error(ArgumentError, "record_name is required")
+    end
 
-    it "acts the same as run: record when called with no matching record file"
-    it "acts the same as run: verify when called with a matching record file"
-
-    it "uses the same recorder and record interface as Backspin.run"
-  end
-
-  context "run with invalid args"
-  it "raises ArgumentError when no record name is provided" do
-    expect do
-      Backspin.run do
-        Open3.capture3("echo hello")
-      end
-    end.to raise_error(ArgumentError, /wrong number of arguments/)
-  end
-
-  it "raises ArgumentError when record name is nil" do
-    expect do
-      Backspin.run(nil, mode: :record) do
-        Open3.capture3("echo hello")
-      end
-    end.to raise_error(ArgumentError, "record_name is required")
-  end
-
-  it "raises ArgumentError when record name is empty" do
-    expect do
-      Backspin.run("", mode: :record) do
-        Open3.capture3("echo hello")
-      end
-    end.to raise_error(ArgumentError, "record_name is required")
+    it "raises ArgumentError when record name is empty" do
+      expect do
+        Backspin.run("", mode: :record) do
+          Open3.capture3("echo hello")
+        end
+      end.to raise_error(ArgumentError, "record_name is required")
+    end
   end
 end
