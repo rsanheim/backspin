@@ -136,6 +136,150 @@ module Backspin
       )
     end
 
+    # Performs capture recording by intercepting all stdout/stderr output
+    def perform_capture_recording
+      require "tempfile"
+
+      # Create temporary files for capturing output
+      stdout_tempfile = Tempfile.new("backspin_stdout")
+      stderr_tempfile = Tempfile.new("backspin_stderr")
+
+      begin
+        # Save original file descriptors
+        original_stdout_fd = $stdout.dup
+        original_stderr_fd = $stderr.dup
+
+        # Redirect both Ruby IO and file descriptors
+        $stdout.reopen(stdout_tempfile)
+        $stderr.reopen(stderr_tempfile)
+
+        # Execute the block
+        result = yield
+
+        # Flush and read captured output
+        $stdout.flush
+        $stderr.flush
+        stdout_tempfile.rewind
+        stderr_tempfile.rewind
+
+        captured_stdout = stdout_tempfile.read
+        captured_stderr = stderr_tempfile.read
+
+        # Create a single command representing all captured output
+        command = Command.new(
+          method_class: Backspin::Capturer,
+          args: ["<captured block>"],
+          stdout: captured_stdout,
+          stderr: captured_stderr,
+          status: 0,
+          recorded_at: Time.now.iso8601
+        )
+
+        record.add_command(command)
+        record.save(filter: @filter)
+
+        RecordResult.new(output: result, mode: :record, record: record)
+      ensure
+        # Restore original file descriptors
+        $stdout.reopen(original_stdout_fd)
+        $stderr.reopen(original_stderr_fd)
+        original_stdout_fd.close
+        original_stderr_fd.close
+
+        # Clean up temp files
+        stdout_tempfile.close!
+        stderr_tempfile.close!
+      end
+    end
+
+    # Performs capture verification by capturing output and comparing with recorded values
+    def perform_capture_verification
+      raise RecordNotFoundError, "Record not found: #{record.path}" unless record.exists?
+      raise RecordNotFoundError, "No commands found in record #{record.path}" if record.empty?
+
+      require "tempfile"
+
+      # Create temporary files for capturing output
+      stdout_tempfile = Tempfile.new("backspin_stdout")
+      stderr_tempfile = Tempfile.new("backspin_stderr")
+
+      begin
+        # Save original file descriptors
+        original_stdout_fd = $stdout.dup
+        original_stderr_fd = $stderr.dup
+
+        # Redirect both Ruby IO and file descriptors
+        $stdout.reopen(stdout_tempfile)
+        $stderr.reopen(stderr_tempfile)
+
+        # Execute the block
+        output = yield
+
+        # Flush and read captured output
+        $stdout.flush
+        $stderr.flush
+        stdout_tempfile.rewind
+        stderr_tempfile.rewind
+
+        captured_stdout = stdout_tempfile.read
+        captured_stderr = stderr_tempfile.read
+
+        # Get the recorded command (should be only one for capture)
+        recorded_command = record.commands.first
+
+        # Create actual command from captured output
+        actual_command = Command.new(
+          method_class: Backspin::Capturer,
+          args: ["<captured block>"],
+          stdout: captured_stdout,
+          stderr: captured_stderr,
+          status: 0
+        )
+
+        # Create CommandDiff for comparison
+        command_diff = CommandDiff.new(
+          recorded_command: recorded_command,
+          actual_command: actual_command,
+          matcher: @matcher
+        )
+
+        RecordResult.new(
+          output: output,
+          mode: :verify,
+          verified: command_diff.verified?,
+          record: record,
+          command_diffs: [command_diff]
+        )
+      ensure
+        # Restore original file descriptors
+        $stdout.reopen(original_stdout_fd)
+        $stderr.reopen(original_stderr_fd)
+        original_stdout_fd.close
+        original_stderr_fd.close
+
+        # Clean up temp files
+        stdout_tempfile.close!
+        stderr_tempfile.close!
+      end
+    end
+
+    # Performs capture playback - executes block normally but could optionally suppress output
+    def perform_capture_playback
+      raise RecordNotFoundError, "Record not found: #{record.path}" unless record.exists?
+      raise RecordNotFoundError, "No commands found in record" if record.empty?
+
+      # For now, just execute the block normally
+      # In the future, we could optionally suppress output or return recorded output
+      output = yield
+
+      RecordResult.new(
+        output: output,
+        mode: :playback,
+        verified: true,
+        record: record
+      )
+    end
+
     private
 
     def setup_capture3_replay_stub
