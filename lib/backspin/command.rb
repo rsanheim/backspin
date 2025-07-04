@@ -52,6 +52,8 @@ module Backspin
         Open3::Capture3
       when "Kernel::System"
         ::Kernel::System
+      when "Backspin::Capturer"
+        Backspin::Capturer
       else
         # Default to capture3 for backwards compatibility
         Open3::Capture3
@@ -96,4 +98,9 @@ end
 # Define the Kernel::System class for identification
 module ::Kernel
   class System; end
+end
+
+# Define the Backspin::Capturer class for identification
+module Backspin
+  class Capturer; end
 end
