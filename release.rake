@@ -4,7 +4,7 @@ require "bundler/gem_tasks"
 
 # Simplified release tasks using gem-release
 # Install with: gem install gem-release
-
+# https://github.com/svenfuchs/gem-release
 namespace :release do
   desc "Release a new version (bump, tag, release)"
   task :version, [:level] do |t, args|
