@@ -79,7 +79,7 @@ module Backspin
       recorder = Recorder.new(record: record, mode: mode, matcher: matcher, filter: filter)
 
       # Execute the appropriate mode
-      case mode
+      result = case mode
       when :record
         recorder.setup_recording_stubs(:capture3, :system)
         recorder.perform_recording(&block)
@@ -90,6 +90,17 @@ module Backspin
       else
         raise ArgumentError, "Unknown mode: #{mode}"
       end
+
+      # Check if we should raise on verification failure
+      if configuration.raise_on_verification_failure && result.verified? == false
+        error_message = "Backspin verification failed!\n"
+        error_message += "Record: #{result.record.path}\n"
+        error_message += "\n#{result.error_message}" if result.error_message
+
+        raise RSpec::Expectations::ExpectationNotMetError, error_message
+      end
+
+      result
     end
 
     # Strict version of run that raises on verification failure

@@ -1,0 +1,179 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "pathname"
+require "open3"
+
+class AffectedTestRunner
+  EXIT_SUCCESS = 0
+  EXIT_FAILURE = 2
+
+  def initialize
+    @project_dir = ENV["CLAUDE_PROJECT_DIR"]
+    validate_environment!
+  end
+
+  def run
+    input_data = parse_input
+    file_path = extract_file_path(input_data)
+
+    return EXIT_SUCCESS unless ruby_file?(file_path)
+
+    validated_path = validate_and_normalize_path(file_path)
+    return EXIT_SUCCESS unless validated_path
+
+    test_file = determine_test_file(validated_path)
+    return EXIT_SUCCESS unless test_file
+
+    run_tests(test_file)
+  rescue => e
+    abort_to_claude("Unexpected error: #{e.message}")
+  end
+
+  private
+
+  def validate_environment!
+    unless @project_dir
+      abort_to_claude("CLAUDE_PROJECT_DIR environment variable not set")
+    end
+
+    unless Dir.exist?(@project_dir)
+      abort_to_claude("CLAUDE_PROJECT_DIR does not exist: #{@project_dir}")
+    end
+
+    @project_path = Pathname.new(@project_dir).realpath
+  rescue => e
+    abort_to_claude("Invalid CLAUDE_PROJECT_DIR: #{e.message}")
+  end
+
+  def parse_input
+    input = $stdin.read
+    JSON.parse(input)
+  rescue JSON::ParserError => e
+    abort_to_claude("Invalid JSON input: #{e.message}")
+  end
+
+  def extract_file_path(data)
+    file_path = data.dig("tool_input", "file_path")
+
+    unless file_path && !file_path.empty?
+      abort_to_claude("No file_path provided in input")
+    end
+
+    file_path
+  end
+
+  def ruby_file?(file_path)
+    file_path.end_with?(".rb")
+  end
+
+  def validate_and_normalize_path(file_path)
+    # Expand the path to get absolute path
+    expanded_path = File.expand_path(file_path, @project_dir)
+    normalized_path = Pathname.new(expanded_path).cleanpath
+
+    # Check if the path is within the project directory
+    unless normalized_path.to_s.start_with?(@project_path.to_s)
+      log_info("File path outside project directory: #{file_path}")
+      return nil
+    end
+
+    # Convert back to relative path from project root for consistency
+    normalized_path.relative_path_from(@project_path).to_s
+  rescue => e
+    log_info("Invalid file path: #{file_path} - #{e.message}")
+    nil
+  end
+
+  def determine_test_file(file_path)
+    log_info("Determining tests for: #{file_path}")
+
+    if spec_file?(file_path)
+      # If a spec file was modified, run just that spec
+      test_file = file_path
+      log_info("Running single spec: #{test_file}")
+    elsif lib_file?(file_path)
+      # If a lib file was modified, try to find corresponding spec
+      test_file = lib_to_spec_path(file_path)
+
+      if File.exist?(File.join(@project_dir, test_file))
+        log_info("Running corresponding spec: #{test_file}")
+      else
+        # No corresponding spec found, run all tests
+        log_info("No corresponding spec found, running all tests")
+        test_file = "spec"
+      end
+    else
+      # For other Ruby files, run all tests
+      log_info("Running all tests")
+      test_file = "spec"
+    end
+
+    # Validate test file/directory exists
+    full_test_path = File.join(@project_dir, test_file)
+    unless File.exist?(full_test_path)
+      abort_to_claude("Test file/directory does not exist: #{test_file}")
+    end
+
+    test_file
+  end
+
+  def spec_file?(file_path)
+    file_path.match?(%r{^.*spec/.*_spec\.rb$})
+  end
+
+  def lib_file?(file_path)
+    file_path.match?(%r{^.*lib/.*})
+  end
+
+  def lib_to_spec_path(lib_path)
+    # Convert lib/backspin/foo.rb to spec/backspin/foo_spec.rb
+    lib_path.sub(%r{^(.*/)?lib/}, '\1spec/')
+      .sub(/\.rb$/, "_spec.rb")
+  end
+
+  def run_tests(test_file)
+    rspec_path = File.join(@project_dir, "bin", "rspec")
+
+    unless File.executable?(rspec_path)
+      abort_to_claude("rspec binary not found or not executable: #{rspec_path}")
+    end
+
+    log_info("Running: bin/rspec #{test_file}")
+
+    # Change to project directory for command execution
+    Dir.chdir(@project_dir) do
+      stdout, stderr, status = Open3.capture3("bin/rspec", test_file)
+
+      # Output both stdout and stderr
+      $stdout.print stdout
+      $stderr.print stderr
+
+      if status.success?
+        log_info("✅ Tests passed")
+        EXIT_SUCCESS
+      else
+        warn("❌ Tests failed - fix before continuing")
+        EXIT_FAILURE
+      end
+    end
+  rescue => e
+    abort_to_claude("Failed to run tests: #{e.message}")
+  end
+
+  def log_info(message)
+    warn(message)
+  end
+
+  def abort_to_claude(message)
+    warn("❌ ERROR: #{message}")
+    exit EXIT_FAILURE
+  end
+end
+
+# Run the script
+if __FILE__ == $0
+  runner = AffectedTestRunner.new
+  exit runner.run
+end

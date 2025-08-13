@@ -58,7 +58,7 @@ RSpec.describe "Backspin.run with multiple commands" do
       expect(result).to be_success
     end
 
-    it "detects when a command differs" do
+    it "raises when a command differs" do
       # First record
       Backspin.run("multi_verify_diff") do
         Open3.capture3("echo one")
@@ -67,19 +67,21 @@ RSpec.describe "Backspin.run with multiple commands" do
       end
 
       # Then verify with different second command
-      result = Backspin.run("multi_verify_diff") do
-        Open3.capture3("echo one")
-        Open3.capture3("echo TWO CHANGED")
-        Open3.capture3("echo three")
+      expect do
+        Backspin.run("multi_verify_diff") do
+          Open3.capture3("echo one")
+          Open3.capture3("echo TWO CHANGED")
+          Open3.capture3("echo three")
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
+        expect(error.message).to include("Command 2:")
+        expect(error.message).to include("-two")
+        expect(error.message).to include("+TWO CHANGED")
       end
-
-      expect(result).not_to be_verified
-      expect(result.diff).to include("Command 2:")
-      expect(result.diff).to include("-two")
-      expect(result.diff).to include("+TWO CHANGED")
     end
 
-    it "fails if fewer commands are executed than recorded" do
+    it "raises if fewer commands are executed than recorded" do
       # Record 3 commands
       Backspin.run("multi_too_few") do
         Open3.capture3("echo one")
@@ -88,14 +90,16 @@ RSpec.describe "Backspin.run with multiple commands" do
       end
 
       # Try to verify with only 2 commands
-      result = Backspin.run("multi_too_few") do
-        Open3.capture3("echo one")
-        Open3.capture3("echo two")
-        # Missing third command
+      expect do
+        Backspin.run("multi_too_few") do
+          Open3.capture3("echo one")
+          Open3.capture3("echo two")
+          # Missing third command
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
+        expect(error.message).to include("Expected 3 commands but only 2 were executed")
       end
-
-      expect(result.verified?).to be false
-      expect(result.error_message).to eq("Expected 3 commands but only 2 were executed")
     end
 
     it "fails if more commands are executed than recorded" do

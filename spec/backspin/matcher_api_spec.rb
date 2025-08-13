@@ -34,15 +34,17 @@ RSpec.describe "Backspin unified matcher functionality" do
         Open3.capture3("echo 'Version: 1.2.3'")
       end
 
-      result = Backspin.run("match_on_fail",
-        matcher: {stdout: lambda { |recorded, actual|
-          # Require major version to match
-          recorded.match(/Version: 1\./) && actual.match(/Version: 1\./)
-        }}) do
-        Open3.capture3("echo 'Version: 2.0.0'")
+      expect do
+        Backspin.run("match_on_fail",
+          matcher: {stdout: lambda { |recorded, actual|
+            # Require major version to match
+            recorded.match(/Version: 1\./) && actual.match(/Version: 1\./)
+          }}) do
+          Open3.capture3("echo 'Version: 2.0.0'")
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
       end
-
-      expect(result.verified?).to be false
     end
 
     it "only checks fields with matchers (override behavior)" do
@@ -90,17 +92,18 @@ RSpec.describe "Backspin unified matcher functionality" do
         Open3.capture3("sh -c 'echo good; echo bad >&2'")
       end
 
-      result = Backspin.run("match_on_any_fail",
-        matcher: {
-          stdout: ->(recorded, actual) { recorded == actual }, # This will pass
-          stderr: ->(_recorded, _actual) { false } # This will fail
-        }) do
-        Open3.capture3("sh -c 'echo good; echo good >&2'")
+      expect do
+        Backspin.run("match_on_any_fail",
+          matcher: {
+            stdout: ->(recorded, actual) { recorded == actual }, # This will pass
+            stderr: ->(_recorded, _actual) { false } # This will fail
+          }) do
+          Open3.capture3("sh -c 'echo good; echo good >&2'")
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
+        expect(error.message).to include("stderr custom matcher failed")
       end
-
-      diff = result.command_diffs.first
-      expect(diff.diff).to include("stderr diff:")
-      expect(result.verified?).to be false
     end
   end
 
@@ -198,16 +201,18 @@ RSpec.describe "Backspin unified matcher functionality" do
       expect(result.verified?).to be true
 
       # Should fail if output doesn't match pattern
-      result2 = Backspin.run("all_matcher_custom", mode: :verify,
-        matcher: {
-          all: lambda { |_recorded, actual|
-            actual["stdout"].include?("PASS") && actual["stderr"].include?("WARNING")
-          }
-        }) do
-        Open3.capture3("sh", "-c", "echo 'FAIL: test 1'; echo 'OK: no issues' >&2")
+      expect do
+        Backspin.run("all_matcher_custom", mode: :verify,
+          matcher: {
+            all: lambda { |_recorded, actual|
+              actual["stdout"].include?("PASS") && actual["stderr"].include?("WARNING")
+            }
+          }) do
+          Open3.capture3("sh", "-c", "echo 'FAIL: test 1'; echo 'OK: no issues' >&2")
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
       end
-
-      expect(result2.verified?).to be false
     end
 
     it "runs all provided matchers" do
@@ -219,23 +224,24 @@ RSpec.describe "Backspin unified matcher functionality" do
       end
 
       # Verify with failing :all matcher but passing field matcher
-      result = Backspin.run("all_short_circuit", mode: :verify,
-        matcher: {
-          all: lambda { |_r, _a|
-            matchers_called << :all
-            false # Fails
-          },
-          stdout: lambda { |_r, _a|
-            matchers_called << :stdout
-            true # Passes
-          }
-        }) do
-        Open3.capture3("echo", "test")
-      end
+      expect do
+        Backspin.run("all_short_circuit", mode: :verify,
+          matcher: {
+            all: lambda { |_r, _a|
+              matchers_called << :all
+              false # Fails
+            },
+            stdout: lambda { |_r, _a|
+              matchers_called << :stdout
+              true # Passes
+            }
+          }) do
+          Open3.capture3("echo", "test")
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError)
 
-      expect(result.verified?).to be false
-      # Both matchers are called (order may vary due to hash iteration)
-      expect(matchers_called.sort).to eq(%i[all stdout])
+      # Both matchers are called (they may be called multiple times during verification/diff)
+      expect(matchers_called.uniq.sort).to eq(%i[all stdout])
     end
   end
 
@@ -300,25 +306,27 @@ RSpec.describe "Backspin unified matcher functionality" do
       end
 
       # Verify with passing :all but failing field matcher
-      result = Backspin.run("all_pass_field_fail", mode: :verify,
-        matcher: {
-          all: ->(_r, _a) { true }, # Passes
-          stdout: lambda { |_r, a|
-            a.include?("goodbye")
-          } # Fails - looking for wrong text
-        }) do
-        Open3.capture3("echo", "hello")
+      expect do
+        Backspin.run("all_pass_field_fail", mode: :verify,
+          matcher: {
+            all: ->(_r, _a) { true }, # Passes
+            stdout: lambda { |_r, a|
+              a.include?("goodbye")
+            } # Fails - looking for wrong text
+          }) do
+          Open3.capture3("echo", "hello")
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
+        expect(error.message).to include("stdout custom matcher failed")
       end
-
-      expect(result.verified?).to be false
-      expect(result.error_message).to include("stdout custom matcher failed")
     end
 
     it "can use :all for logging/debugging while field matchers do actual verification" do
       logged_data = []
 
-      Backspin.run("all_for_logging") do
-        Open3.capture3("date")
+      Backspin.run("all_for_logging", mode: :record) do
+        Open3.capture3("echo", "test output with : colons")
       end
 
       result = Backspin.run("all_for_logging", mode: :verify,
@@ -332,9 +340,9 @@ RSpec.describe "Backspin unified matcher functionality" do
             }
             true # Always pass - just for logging
           },
-          stdout: ->(_r, a) { a.include?(":") } # Date output contains colons
+          stdout: ->(_r, a) { a.include?(":") } # Check for colons
         }) do
-        Open3.capture3("date")
+        Open3.capture3("echo", "test output with : colons")
       end
 
       expect(result.verified?).to be true

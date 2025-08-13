@@ -1,4 +1,4 @@
-# Backspin 
+# Backspin
 
 [![Ruby](https://img.shields.io/badge/ruby-%23CC342D.svg?style=flat&logo=ruby&logoColor=white)](https://www.ruby-lang.org/)
 [![Gem Version](https://img.shields.io/gem/v/backspin)](https://rubygems.org/gems/backspin)

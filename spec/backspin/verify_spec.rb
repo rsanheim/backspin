@@ -27,13 +27,15 @@ RSpec.describe "Backspin verify functionality" do
     end
 
     it "fails when output differs from recorded record" do
-      result = Backspin.run("echo_verify") do
-        Open3.capture3("echo goodbye")
+      expect do
+        Backspin.run("echo_verify") do
+          Open3.capture3("echo goodbye")
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
+        expect(error.message).to include("-hello")
+        expect(error.message).to include("+goodbye")
       end
-
-      expect(result.verified?).to be false
-      expect(result.diff).to include("-hello")
-      expect(result.diff).to include("+goodbye")
     end
 
     it "verifies stderr and exit status too" do
@@ -50,30 +52,34 @@ RSpec.describe "Backspin verify functionality" do
       expect(result.verified?).to be true
 
       # Verify non-matching stderr
-      result = Backspin.run("stderr_test") do
-        Open3.capture3("sh -c 'echo different >&2; exit 1'")
+      expect do
+        Backspin.run("stderr_test") do
+          Open3.capture3("sh -c 'echo different >&2; exit 1'")
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
+        expect(error.message).to include("-error")
+        expect(error.message).to include("+different")
       end
-
-      expect(result.verified?).to be false
-      expect(result.diff).to include("-error")
-      expect(result.diff).to include("+different")
     end
   end
 
   describe "verification modes" do
     it "can run in strict mode (default) - must match exactly" do
-      Backspin.run("timestamp_test") do
-        Open3.capture3("date +%s%N") # nanoseconds since epoch
+      Backspin.run("strict_test") do
+        Open3.capture3("echo", "exact output")
       end
 
-      sleep 0.01 # Small delay to ensure different timestamp
-
-      # Running date again will produce different output
-      result = Backspin.run("timestamp_test") do
-        Open3.capture3("date +%s%N")
+      # Running with different output will fail in strict mode
+      expect do
+        Backspin.run("strict_test") do
+          Open3.capture3("echo", "different output")
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
+        expect(error.message).to include("-exact output")
+        expect(error.message).to include("+different output")
       end
-
-      expect(result.verified?).to be false
     end
 
     it "can run in playback mode - returns recorded output without running command" do
@@ -92,15 +98,16 @@ RSpec.describe "Backspin verify functionality" do
     end
 
     it "can use custom matchers for flexible verification" do
-      Backspin.run("version_test") do
-        Open3.capture3("ruby --version")
+      # Use a deterministic command for the test
+      Backspin.run("version_test", mode: :record) do
+        Open3.capture3("echo", "ruby version 3.4.5")
       end
 
       result = Backspin.run("version_test",
         matcher: lambda { |recorded, actual|
           recorded["stdout"].start_with?("ruby") && actual["stdout"].start_with?("ruby")
         }) do
-        Open3.capture3("ruby --version")
+        Open3.capture3("echo", "ruby version 3.4.5")
       end
 
       expect(result.verified?).to be true
@@ -121,13 +128,16 @@ RSpec.describe "Backspin verify functionality" do
         Open3.capture3("echo expected")
       end
 
-      result = Backspin.run("failure_test") do
-        Open3.capture3("echo actual")
+      expect do
+        Backspin.run("failure_test") do
+          Open3.capture3("echo actual")
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
+        expect(error.message).to include("Output verification failed")
+        expect(error.message).to include("-expected")
+        expect(error.message).to include("+actual")
       end
-
-      expect(result.error_message).to include("Output verification failed")
-      expect(result.error_message).to include("-expected")
-      expect(result.error_message).to include("+actual")
     end
   end
 end

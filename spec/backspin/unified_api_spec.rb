@@ -46,21 +46,23 @@ RSpec.describe "Backspin.run unified API" do
         expect(result.all_stdout).to eq(["first run\n"])
       end
 
-      it "returns false for verified? when output doesn't match" do
+      it "raises when verification fails due to output mismatch" do
         # Record
         Backspin.run("unified_mismatch") do
           Open3.capture3("echo original")
         end
 
         # Verify with different output
-        result = Backspin.run("unified_mismatch") do
-          Open3.capture3("echo different")
+        expect do
+          Backspin.run("unified_mismatch") do
+            Open3.capture3("echo different")
+          end
+        end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+          expect(error.message).to include("Backspin verification failed!")
+          expect(error.message).to include("Command 1:")
+          expect(error.message).to include("-original")
+          expect(error.message).to include("+different")
         end
-
-        expect(result).not_to be_verified
-        expect(result.diff).to include("Command 1:")
-        expect(result.diff).to include("-original")
-        expect(result.diff).to include("+different")
       end
     end
 
