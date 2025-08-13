@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.0 - 2025-08-13
+* Introduce `Backspin.capture` for rspec-less, simpler stdout/stderr testing https://github.com/rsanheim/backspin/pull/17
+
 ## 0.5.0 - 2025-06-11
 * Simplify matcher API so user provided matchers override defaults - [#14](https://github.com/rsanheim/backspin/pull/14)
 * Also extract a proper `Matcher` object
