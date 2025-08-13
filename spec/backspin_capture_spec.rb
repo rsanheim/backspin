@@ -89,12 +89,14 @@ RSpec.describe "Backspin.capture" do
       expect(result.mode).to eq(:verify)
       expect(result.verified?).to be true
 
-      result = Backspin.capture(record_name) do
-        puts "Different output"
+      expect do
+        Backspin.capture(record_name) do
+          puts "Different output"
+        end
+      end.to raise_error(Backspin::VerificationError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
+        expect(error.message).to include("Output verification failed")
       end
-
-      expect(result.mode).to eq(:verify)
-      expect(result.verified?).to be false
     end
 
     it "uses the same recorder and record interface as Backspin.run" do
@@ -136,12 +138,16 @@ RSpec.describe "Backspin.capture" do
 
       expect(result.verified?).to be true
 
-      result_without_matcher = Backspin.capture("capture_with_timestamp", mode: :verify) do
-        puts "The time is: 2024-12-25 15:30:45"
-        puts "Static content"
+      expect do
+        Backspin.capture("capture_with_timestamp", mode: :verify) do
+          puts "The time is: 2024-12-25 15:30:45"
+          puts "Static content"
+        end
+      end.to raise_error(Backspin::VerificationError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
+        expect(error.message).to include("-The time is: 2024-01-01 10:00:00")
+        expect(error.message).to include("+The time is: 2024-12-25 15:30:45")
       end
-
-      expect(result_without_matcher.verified?).to be false
 
       filter = ->(data) { data.merge("filtered" => true) }
 
@@ -202,6 +208,54 @@ RSpec.describe "Backspin.capture" do
       end
 
       expect(result.verified?).to be true
+    end
+
+    context "with raise_on_verification_failure set to false" do
+      it "returns result with verified? false instead of raising" do
+        Backspin.capture("capture_no_raise") do
+          puts "original output"
+        end
+
+        Backspin.configure do |config|
+          config.raise_on_verification_failure = false
+        end
+
+        result = Backspin.capture("capture_no_raise") do
+          puts "different output"
+        end
+
+        expect(result).not_to be_verified
+        expect(result.verified?).to be false
+        expect(result.diff).to include("-original output")
+        expect(result.diff).to include("+different output")
+        expect(result.error_message).to include("Output verification failed")
+      end
+
+      it "allows users to handle verification failures themselves" do
+        Backspin.capture("capture_handle_failure") do
+          puts "expected stdout"
+          warn "expected stderr"
+        end
+
+        Backspin.configuration.raise_on_verification_failure = false
+
+        result = Backspin.capture("capture_handle_failure") do
+          puts "actual stdout"
+          warn "actual stderr"
+        end
+
+        expect(result.verified?).to be false
+        expect(result.error_message).to be_a(String)
+        expect(result.diff).to include("-expected stdout")
+        expect(result.diff).to include("+actual stdout")
+        expect(result.diff).to include("-expected stderr")
+        expect(result.diff).to include("+actual stderr")
+
+        if !result.verified?
+          custom_message = "Capture verification failed: #{result.error_message}"
+          expect(custom_message).to include("Output verification failed")
+        end
+      end
     end
   end
 end

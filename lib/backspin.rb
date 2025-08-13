@@ -19,6 +19,8 @@ require "backspin/record_result"
 module Backspin
   class RecordNotFoundError < StandardError; end
 
+  class VerificationError < StandardError; end
+
   # Include RSpec mocks methods
   extend RSpec::Mocks::ExampleMethods
 
@@ -152,7 +154,7 @@ module Backspin
       recorder = Recorder.new(record: record, mode: mode, matcher: matcher, filter: filter)
 
       # Execute the appropriate mode
-      case mode
+      result = case mode
       when :record
         recorder.perform_capture_recording(&block)
       when :verify
@@ -162,6 +164,22 @@ module Backspin
       else
         raise ArgumentError, "Unknown mode: #{mode}"
       end
+
+      # Check if we should raise on verification failure
+      if configuration.raise_on_verification_failure && result.verified? == false
+        error_message = "Backspin verification failed!\n"
+        error_message += "Record: #{result.record.path}\n"
+        error_message += result.error_message || "Output verification failed"
+
+        # Include diff if available
+        if result.diff
+          error_message += "\n\nDiff:\n#{result.diff}"
+        end
+
+        raise VerificationError, error_message
+      end
+
+      result
     end
 
     private

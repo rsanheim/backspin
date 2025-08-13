@@ -42,9 +42,10 @@ bin/rake standard                # Alternative: Run via Rake task
 
 **Backspin Module** (`lib/backspin.rb`)
 - Main API: `run`, `run!` (both raise on verification failure by default)
+- Capture API: `capture` (raises `VerificationError` on verification failure by default)
 - Legacy API: `call`, `verify`, `verify!`, `use_record`
 - Credential scrubbing logic
-- Configuration management (including `raise_on_verification_failure` which defaults to `true`)
+- Configuration management (including `raise_on_verification_failure` which defaults to `true` and affects both `run` and `capture`)
 
 **Command Class** (`lib/backspin.rb`)
 - Represents a single CLI execution

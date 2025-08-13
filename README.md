@@ -33,7 +33,7 @@ And then run `bundle install`.
 
 ### Quick Start
 
-The simplest way to use Backspin is with the `run` method, which automatically records on the first execution and verifies on subsequent runs:
+The simplest way to use Backspin is with the `run` method, which automatically records on the first execution and verifies on subsequent runs.
 
 ```ruby
 require "backspin"
@@ -214,11 +214,18 @@ You can configure Backspin's behavior globally:
 
 ```ruby
 Backspin.configure do |config|
+  # Both run and capture methods will raise on verification failure by default
   config.raise_on_verification_failure = false # default is true
   config.backspin_dir = "spec/fixtures/cli_records" # default is "fixtures/backspin"
   config.scrub_credentials = false # default is true
 end
 ```
+
+The `raise_on_verification_failure` setting affects both `Backspin.run` and `Backspin.capture`:
+- When `true` (default): Both methods raise exceptions on verification failure
+  - `run` raises `RSpec::Expectations::ExpectationNotMetError`
+  - `capture` raises `Backspin::VerificationError` (framework-agnostic)
+- When `false`: Both methods return a result with `verified?` set to false
 
 If you need to disable the raising behavior for a specific test, you can temporarily configure it:
 
