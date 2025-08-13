@@ -1,4 +1,4 @@
-# Backspin 
+# Backspin
 
 [![Ruby](https://img.shields.io/badge/ruby-%23CC342D.svg?style=flat&logo=ruby&logoColor=white)](https://www.ruby-lang.org/)
 [![Gem Version](https://img.shields.io/gem/v/backspin)](https://rubygems.org/gems/backspin)
@@ -33,7 +33,7 @@ And then run `bundle install`.
 
 ### Quick Start
 
-The simplest way to use Backspin is with the `run` method, which automatically records on the first execution and verifies on subsequent runs:
+The simplest way to use Backspin is with the `run` method, which automatically records on the first execution and verifies on subsequent runs.
 
 ```ruby
 require "backspin"
@@ -43,17 +43,19 @@ result = Backspin.run("my_command") do
   Open3.capture3("echo hello world")
 end
 
-# Subsequent runs: verifies the output matches
-result = Backspin.run("my_command") do
-  Open3.capture3("echo hello world")
+# Subsequent runs: verifies the output matches and raises on mismatch
+Backspin.run("my_command") do
+  Open3.capture3("echo hello world")  # Passes - output matches
 end
 
-# Use run! to automatically fail tests on mismatch
-Backspin.run!("my_command") do
-  Open3.capture3("echo hello mars")
+# This will raise an error automatically
+Backspin.run("my_command") do
+  Open3.capture3("echo hello mars")  
 end
-# Raises an error because stdout will not match the recorded output
+# Raises RSpec::Expectations::ExpectationNotMetError because output doesn't match
 ```
+
+By default, `Backspin.run` will raise an exception when verification fails, making your tests fail automatically. This is the recommended approach for most scenarios.
 
 ### Recording Modes
 
@@ -83,17 +85,24 @@ result = Backspin.run("slow_command", mode: :playback) do
 end
 ```
 
-### Using run! for automatic test failures
+### The run! method
 
-The `run!` method works exactly like `run` but automatically fails the test if verification fails:
+**NOTE:** This method is deprecated and will be removed soon.
+
+The `run!` method is maintained for backwards compatibility and works identically to `run`. Since `run` now raises on verification failure by default, both methods behave the same way:
 
 ```ruby
-# Automatically fail the test if output doesn't match
+# Both of these are equivalent and will raise on verification failure
+Backspin.run("echo_test") do
+  Open3.capture3("echo hello")
+end
+
 Backspin.run!("echo_test") do
   Open3.capture3("echo hello")
 end
-# Raises an error with detailed diff if verification fails from recorded data in "echo_test.yml"
 ```
+
+For new code, we recommend using `run` as it's the primary API method.
 
 ### Custom matchers
 
@@ -198,6 +207,42 @@ result.commands[3].stderr  # curl errors if any
 ```
 
 When verifying multiple commands, Backspin ensures all commands match in the exact order they were recorded. If any command differs, you'll get a detailed error showing which commands failed.
+
+### Configuration
+
+You can configure Backspin's behavior globally:
+
+```ruby
+Backspin.configure do |config|
+  # Both run and capture methods will raise on verification failure by default
+  config.raise_on_verification_failure = false # default is true
+  config.backspin_dir = "spec/fixtures/cli_records" # default is "fixtures/backspin"
+  config.scrub_credentials = false # default is true
+end
+```
+
+The `raise_on_verification_failure` setting affects both `Backspin.run` and `Backspin.capture`:
+- When `true` (default): Both methods raise exceptions on verification failure
+  - `run` raises `RSpec::Expectations::ExpectationNotMetError`
+  - `capture` raises `Backspin::VerificationError` (framework-agnostic)
+- When `false`: Both methods return a result with `verified?` set to false
+
+If you need to disable the raising behavior for a specific test, you can temporarily configure it:
+
+```ruby
+# Temporarily disable raising for this block
+Backspin.configure do |config|
+  config.raise_on_verification_failure = false
+end
+
+result = Backspin.run("my_test") do
+  Open3.capture3("echo different")
+end
+# result.verified? will be false but won't raise
+
+# Reset configuration
+Backspin.reset_configuration!
+```
 
 ### Credential Scrubbing
 

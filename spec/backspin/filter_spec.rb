@@ -87,6 +87,12 @@ RSpec.describe "Backspin filtering support" do
   end
 
   describe "Backspin.run with filter and different modes" do
+    before do
+      # Ensure record doesn't exist from previous runs
+      record_path = Backspin.configuration.backspin_dir.join("use_record_filter.yml")
+      FileUtils.rm_f(record_path)
+    end
+
     it "applies filter when recording (auto mode)" do
       filter = lambda { |data|
         data["stdout"] = data["stdout"].upcase

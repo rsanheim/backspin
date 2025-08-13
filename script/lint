@@ -1,6 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run Standard Ruby linter
-echo "Running Standard Ruby linter..."
-bundle exec standardrb "$@"
+FIX_OPT="--no-fix"
+while [[ $# -gt 0 ]]; do
+  case $1 in
+      -f|--fix)
+          FIX_OPT="--fix"
+          shift
+          ;;
+      --fix-unsafely)
+          FIX_OPT="--fix-unsafely"
+          shift
+          ;;
+      *)
+          echo "Error: Unknown option: $1"
+          exit 1
+          ;;
+  esac
+done
+
+bundle exec standardrb "$@" $FIX_OPT

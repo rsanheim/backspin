@@ -4,9 +4,9 @@ format_version: '2.0'
 commands:
 - command_type: Open3::Capture3
   args:
-  - ruby
-  - "--version"
-  stdout: 'ruby 3.4.4 (2025-05-14 revision a38531fd3f) +PRISM [arm64-darwin24]
+  - echo
+  - ruby version 3.4.5
+  stdout: 'ruby version 3.4.5
 
     '
   stderr: ''

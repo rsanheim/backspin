@@ -5,9 +5,8 @@ commands:
 - command_type: Open3::Capture3
   args:
   - echo
-  - "'hello"
-  - world'
-  stdout: 'HELLO WORLD
+  - exact output
+  stdout: 'exact output
 
     '
   stderr: ''

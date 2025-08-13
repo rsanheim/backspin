@@ -71,12 +71,14 @@ RSpec.describe "Backspin system() support" do
         system("true") # exit status 0
       end
 
-      # Verify with a failing command - should fail
-      result = Backspin.run("verify_system_diff") do
-        system("false") # exit status 1
+      # Verify with a failing command - should raise
+      expect do
+        Backspin.run("verify_system_diff") do
+          system("false") # exit status 1
+        end
+      end.to raise_error(RSpec::Expectations::ExpectationNotMetError) do |error|
+        expect(error.message).to include("Backspin verification failed!")
       end
-
-      expect(result.verified?).to be false
     end
   end
 
