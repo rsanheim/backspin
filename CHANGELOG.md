@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.0 - 2025-08-13
+* Breaking change: `Backspin.run` and `Backspin.capture` now raise an error if verification fails by default. Use `Backspin.configure` to opt-out. https://github.com/rsanheim/backspin/pull/18
+
 ## 0.6.0 - 2025-08-13
 * Introduce `Backspin.capture` for rspec-less, simpler stdout/stderr testing https://github.com/rsanheim/backspin/pull/17
 
