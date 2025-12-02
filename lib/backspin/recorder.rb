@@ -10,6 +10,7 @@ module Backspin
   # Handles stubbing and recording of command executions
   class Recorder
     include RSpec::Mocks::ExampleMethods
+
     SUPPORTED_COMMAND_TYPES = %i[capture3 system].freeze
 
     attr_reader :commands, :mode, :record, :matcher, :filter

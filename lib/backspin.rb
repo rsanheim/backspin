@@ -38,7 +38,6 @@ module Backspin
     def actual_commands
       result.command_diffs.map(&:actual_command)
     end
-
   end
 
   # Include RSpec mocks methods
