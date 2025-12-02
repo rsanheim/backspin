@@ -153,7 +153,6 @@ module Backspin
         $stdout.reopen(stdout_tempfile)
         $stderr.reopen(stderr_tempfile)
 
-        # Execute the block
         result = yield
 
         # Flush and read captured output
@@ -168,7 +167,7 @@ module Backspin
         # Create a single command representing all captured output
         command = Command.new(
           method_class: Backspin::Capturer,
-          args: ["<captured block>"],
+          args: [],
           stdout: captured_stdout,
           stderr: captured_stderr,
           status: 0,

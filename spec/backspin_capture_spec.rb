@@ -55,7 +55,7 @@ RSpec.describe "Backspin.capture" do
       command = yaml_content["commands"].first
 
       expect(command["command_type"]).to eq("Backspin::Capturer")
-      expect(command["args"]).to eq(["<captured block>"])
+      expect(command["args"]).to eq([])
       expect(command["stdout"]).to eq("Test output\n")
       expect(command["stderr"]).to eq("Test error\n")
       expect(command["status"]).to eq(0)
@@ -96,6 +96,31 @@ RSpec.describe "Backspin.capture" do
       end.to raise_error(Backspin::VerificationError) do |error|
         expect(error.message).to include("Backspin verification failed!")
         expect(error.message).to include("Output verification failed")
+      end
+    end
+
+    it "includes result object on VerificationError" do
+      record_name = "capture_error_with_result"
+
+      Backspin.capture(record_name, mode: :record) do
+        puts "Recorded output"
+      end
+
+      begin
+        Backspin.capture(record_name, mode: :verify) do
+          puts "Actual output"
+        end
+      rescue Backspin::VerificationError => error
+        expect(error.result).to be_a(Backspin::RecordResult)
+        expected_diff = <<~DIFF
+          Command 1:
+          [stdout]
+          -Recorded output
+          +Actual output
+        DIFF
+        expect(error.result.diff).to eq(expected_diff.strip)
+        expect(error.recorded_commands.first.stdout).to eq("Recorded output\n")
+        expect(error.actual_commands.first.stdout).to eq("Actual output\n")
       end
     end
 
