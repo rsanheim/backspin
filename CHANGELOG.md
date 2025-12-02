@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.1 - 2025-12-02
+* Include result object on VerificationError to make it easier for callers to debug verification errors
+
 ## 0.7.0 - 2025-08-13
 * Breaking change: `Backspin.run` and `Backspin.capture` now raise an error if verification fails by default. Use `Backspin.configure` to opt-out. https://github.com/rsanheim/backspin/pull/18
 
