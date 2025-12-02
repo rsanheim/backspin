@@ -68,11 +68,11 @@ module Backspin
     end
 
     def stdout_diff
-      "stdout diff:\n#{generate_line_diff(recorded_command.stdout, actual_command.stdout)}"
+      "[stdout]\n#{generate_line_diff(recorded_command.stdout, actual_command.stdout)}"
     end
 
     def stderr_diff
-      "stderr diff:\n#{generate_line_diff(recorded_command.stderr, actual_command.stderr)}"
+      "[stderr]\n#{generate_line_diff(recorded_command.stderr, actual_command.stderr)}"
     end
 
     def generate_line_diff(expected, actual)

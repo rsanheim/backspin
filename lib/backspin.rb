@@ -19,7 +19,26 @@ require "backspin/record_result"
 module Backspin
   class RecordNotFoundError < StandardError; end
 
-  class VerificationError < StandardError; end
+  class VerificationError < StandardError
+    attr_reader :result
+
+    def initialize(message, result: nil)
+      super(message)
+      @result = result
+    end
+
+    def diff
+      result.diff
+    end
+
+    def recorded_commands
+      result.command_diffs.map(&:recorded_command)
+    end
+
+    def actual_commands
+      result.command_diffs.map(&:actual_command)
+    end
+  end
 
   # Include RSpec mocks methods
   extend RSpec::Mocks::ExampleMethods
@@ -176,7 +195,7 @@ module Backspin
           error_message += "\n\nDiff:\n#{result.diff}"
         end
 
-        raise VerificationError, error_message
+        raise VerificationError.new(error_message, result: result)
       end
 
       result

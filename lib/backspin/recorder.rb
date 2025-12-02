@@ -10,6 +10,7 @@ module Backspin
   # Handles stubbing and recording of command executions
   class Recorder
     include RSpec::Mocks::ExampleMethods
+
     SUPPORTED_COMMAND_TYPES = %i[capture3 system].freeze
 
     attr_reader :commands, :mode, :record, :matcher, :filter
@@ -153,7 +154,6 @@ module Backspin
         $stdout.reopen(stdout_tempfile)
         $stderr.reopen(stderr_tempfile)
 
-        # Execute the block
         result = yield
 
         # Flush and read captured output
@@ -168,7 +168,7 @@ module Backspin
         # Create a single command representing all captured output
         command = Command.new(
           method_class: Backspin::Capturer,
-          args: ["<captured block>"],
+          args: [],
           stdout: captured_stdout,
           stderr: captured_stderr,
           status: 0,
