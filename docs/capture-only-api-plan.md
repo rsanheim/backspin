@@ -26,6 +26,7 @@
 - Bump `Record::FORMAT_VERSION` and hard-reject legacy records.
 - Always scrub stdout/stderr, args, and env values using the current credential patterns (defaults + user-provided).
 - Keep `raise_on_verification_failure` supported (default `true`) and cover it with a spec.
+- Preserve the existing matcher contract (Proc, hash with fields, and `:all`) for both command and block capture paths.
 
 ## Plan
 1. Define the public API signature and behavior for the dual-mode `run` and the `capture` alias, including `env:` handling and the removal of `:playback`.
