@@ -49,4 +49,134 @@ RSpec.describe "Backspin matcher contract" do
 
     expect(result).to be_verified
   end
+
+  it "defaults to matching stdout/stderr/status only" do
+    recorded_command = Backspin::Command.new(
+      method_class: Open3::Capture3,
+      args: ["echo", "recorded"],
+      env: {"FOO" => "recorded"},
+      stdout: "same\n",
+      stderr: "",
+      status: 0
+    )
+
+    actual_command = Backspin::Command.new(
+      method_class: Open3::Capture3,
+      args: ["echo", "actual"],
+      env: {"FOO" => "actual"},
+      stdout: "same\n",
+      stderr: "",
+      status: 0
+    )
+
+    matcher = Backspin::Matcher.new(
+      config: nil,
+      recorded_command: recorded_command,
+      actual_command: actual_command
+    )
+
+    expect(matcher.match?).to be true
+    expect(matcher.failure_reason).to eq("")
+  end
+
+  it "reports all output/status differences for the default matcher" do
+    recorded_command = Backspin::Command.new(
+      method_class: Open3::Capture3,
+      args: ["echo", "recorded"],
+      stdout: "one\n",
+      stderr: "err\n",
+      status: 0
+    )
+
+    actual_command = Backspin::Command.new(
+      method_class: Open3::Capture3,
+      args: ["echo", "actual"],
+      stdout: "two\n",
+      stderr: "diff\n",
+      status: 1
+    )
+
+    matcher = Backspin::Matcher.new(
+      config: nil,
+      recorded_command: recorded_command,
+      actual_command: actual_command
+    )
+
+    expect(matcher.failure_reason).to include("stdout differs")
+    expect(matcher.failure_reason).to include("stderr differs")
+    expect(matcher.failure_reason).to include("exit status differs")
+  end
+
+  it "validates hash matcher keys and values" do
+    recorded_command = Backspin::Command.new(
+      method_class: Open3::Capture3,
+      args: ["echo", "recorded"],
+      stdout: "ok\n",
+      stderr: "",
+      status: 0
+    )
+
+    actual_command = Backspin::Command.new(
+      method_class: Open3::Capture3,
+      args: ["echo", "actual"],
+      stdout: "ok\n",
+      stderr: "",
+      status: 0
+    )
+
+    expect do
+      Backspin::Matcher.new(
+        config: {bad: ->(_recorded, _actual) { true }},
+        recorded_command: recorded_command,
+        actual_command: actual_command
+      )
+    end.to raise_error(ArgumentError, /Invalid matcher key/)
+
+    expect do
+      Backspin::Matcher.new(
+        config: {stdout: "nope"},
+        recorded_command: recorded_command,
+        actual_command: actual_command
+      )
+    end.to raise_error(ArgumentError, /must be callable/)
+  end
+
+  it "runs all hash matchers and reports each failure reason" do
+    recorded_command = Backspin::Command.new(
+      method_class: Open3::Capture3,
+      args: ["echo", "recorded"],
+      stdout: "ok\n",
+      stderr: "err\n",
+      status: 0
+    )
+
+    actual_command = Backspin::Command.new(
+      method_class: Open3::Capture3,
+      args: ["echo", "actual"],
+      stdout: "bad\n",
+      stderr: "bad\n",
+      status: 1
+    )
+
+    calls = []
+    matcher_config = {
+      all: ->(_recorded, _actual) { calls << :all; false },
+      stdout: ->(_recorded, _actual) { calls << :stdout; false },
+      stderr: ->(_recorded, _actual) { calls << :stderr; false },
+      status: ->(_recorded, _actual) { calls << :status; false }
+    }
+
+    matcher = Backspin::Matcher.new(
+      config: matcher_config,
+      recorded_command: recorded_command,
+      actual_command: actual_command
+    )
+
+    expect(matcher.match?).to be false
+    expect(calls).to match_array(%i[all stdout stderr status])
+    expect(matcher.failure_reason).to include(":all matcher failed")
+    expect(matcher.failure_reason).to include("stdout custom matcher failed")
+    expect(matcher.failure_reason).to include("stderr custom matcher failed")
+    expect(matcher.failure_reason).to include("status custom matcher failed")
+  end
 end
