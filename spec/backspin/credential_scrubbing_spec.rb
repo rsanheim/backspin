@@ -44,7 +44,7 @@ RSpec.describe "Backspin credential scrubbing" do
 
     record_data = YAML.load_file(result.record_path)
     expect(record_data["commands"].first["stdout"]).to eq("normal output\n")
-    expect(record_data["commands"].first["stderr"]).to eq("Error: Invalid #{'*' * 43}\n")
+    expect(record_data["commands"].first["stderr"]).to eq("Error: Invalid #{"*" * 43}\n")
   end
 
   it "scrubs credentials in command arguments" do
