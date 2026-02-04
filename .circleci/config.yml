@@ -6,26 +6,38 @@ orbs:
   ruby: circleci/ruby@2.5.3
 
 jobs:
-  build:
+  test:
     resource_class: medium
     parameters:
       ruby-version:
         type: string
     docker:
       - image: cimg/ruby:<< parameters.ruby-version >>
-
     steps:
       - checkout
       - ruby/install-deps:
           key: gems-v1-ruby<< parameters.ruby-version >>
       - run:
-          name: Run specs and lint
-          command: bundle exec rake
+          name: Run specs
+          command: bundle exec rake spec
+
+  lint:
+    resource_class: medium
+    docker:
+      - image: cimg/ruby:4.0
+    steps:
+      - checkout
+      - ruby/install-deps:
+          key: gems-v1-ruby4.0
+      - run:
+          name: Run Standard Ruby linter
+          command: bundle exec rake standard
 
 workflows:
   build:
     jobs:
-      - build:
+      - test:
           matrix:
             parameters:
               ruby-version: ["3.2", "3.3", "3.4", "4.0"]
+      - lint
