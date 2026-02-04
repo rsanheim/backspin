@@ -75,8 +75,6 @@ module Backspin
     # @param filter [Proc] Custom filter for recorded data
     # @return [RecordResult] Result object with output and status
     def run(command = nil, name:, env: nil, mode: :auto, matcher: nil, filter: nil, &block)
-      raise ArgumentError, "name is required" if name.nil? || name.empty?
-
       if block_given?
         raise ArgumentError, "command must be omitted when using a block" unless command.nil?
         raise ArgumentError, "env is not supported when using a block" unless env.nil?
@@ -143,7 +141,7 @@ module Backspin
         Record.load_or_create(record_path)
       end
 
-      normalized_env = normalize_env(env)
+      normalized_env = env.nil? ? nil : normalize_env(env)
 
       result = case mode
       when :record
@@ -198,7 +196,6 @@ module Backspin
     end
 
     def normalize_env(env)
-      return nil if env.nil?
       raise ArgumentError, "env must be a Hash" unless env.is_a?(Hash)
 
       env.empty? ? nil : env
