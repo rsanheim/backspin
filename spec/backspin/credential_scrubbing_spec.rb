@@ -70,12 +70,37 @@ RSpec.describe "Backspin credential scrubbing" do
     expect(record_data["commands"].first["env"]).to eq({"AWS_ACCESS_KEY_ID" => "********************"})
   end
 
+  it "scrubs credentials from captured output" do
+    result = Backspin.capture("capture_scrub") do
+      puts "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"
+      warn "Error: Invalid API_KEY=sk-1234567890abcdef1234567890abcdef"
+    end
+
+    record_data = YAML.load_file(result.record_path)
+    command = record_data["commands"].first
+    expect(command["stdout"]).to eq("AWS_ACCESS_KEY_ID=********************\n")
+    expect(command["stderr"]).to eq("Error: Invalid #{"*" * 43}\n")
+  end
+
   it "does not scrub when scrubbing is disabled" do
     Backspin.configure do |config|
       config.scrub_credentials = false
     end
 
     result = Backspin.run(["echo", "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"], name: "no_scrub")
+
+    record_data = YAML.load_file(result.record_path)
+    expect(record_data["commands"].first["stdout"]).to eq("AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE\n")
+  end
+
+  it "does not scrub captured output when scrubbing is disabled" do
+    Backspin.configure do |config|
+      config.scrub_credentials = false
+    end
+
+    result = Backspin.capture("capture_no_scrub") do
+      puts "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"
+    end
 
     record_data = YAML.load_file(result.record_path)
     expect(record_data["commands"].first["stdout"]).to eq("AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE\n")
