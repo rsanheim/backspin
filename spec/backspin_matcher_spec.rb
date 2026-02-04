@@ -179,4 +179,32 @@ RSpec.describe "Backspin matcher contract" do
     expect(matcher.failure_reason).to include("stderr custom matcher failed")
     expect(matcher.failure_reason).to include("status custom matcher failed")
   end
+
+  it "ignores args and env for capture commands by default" do
+    recorded_command = Backspin::Command.new(
+      method_class: Backspin::Capturer,
+      args: ["<captured block>"],
+      env: {"FOO" => "recorded"},
+      stdout: "same\n",
+      stderr: "",
+      status: 0
+    )
+
+    actual_command = Backspin::Command.new(
+      method_class: Backspin::Capturer,
+      args: ["different args"],
+      env: {"FOO" => "actual"},
+      stdout: "same\n",
+      stderr: "",
+      status: 0
+    )
+
+    matcher = Backspin::Matcher.new(
+      config: nil,
+      recorded_command: recorded_command,
+      actual_command: actual_command
+    )
+
+    expect(matcher.match?).to be true
+  end
 end

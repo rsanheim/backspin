@@ -42,39 +42,38 @@
 
 ## Follow-up Spec Coverage
 - [x] Default behavior spec (no mode specified): call `Backspin.run` twice with the same name; first call records, second call verifies.
-- [ ] Outside-in integration specs with real commands (no mocks):
+- [x] Outside-in integration specs with real commands (no mocks):
   - [x] `Backspin.run` array + string forms using `echo`/`ls`/`date` (macOS/Linux).
   - [x] Add a failing command to cover stderr/status behavior explicitly.
   - [x] Validate `:auto` (record then verify) and explicit `:verify` missing-record error.
-  - [ ] Add explicit `:record` overwrite coverage.
+  - [x] Add explicit `:record` overwrite coverage.
   - [x] `Backspin.capture` block that mixes `puts`, `$stdout.print`, `warn`, `system`, backticks, and `Open3.capture3`; ensure single-command record and placeholder status.
   - [x] Toggle `raise_on_verification_failure` for run.
-  - [ ] Toggle `raise_on_verification_failure` for capture.
-- [ ] Replace removed implementation specs with behavior-focused coverage:
+  - [x] Toggle `raise_on_verification_failure` for capture.
+- [x] Replace removed implementation specs with behavior-focused coverage:
   - [x] Record format errors: invalid YAML, unknown `command_type`, legacy `format_version`, and multi-command records rejected for run/capture verify.
-  - [ ] Record format errors: missing keys.
+  - [x] Record format errors: missing keys.
   - [x] Command type mismatch errors (capture record verified with run and vice versa).
   - [x] Input validation: missing command, empty command array, `env` not a Hash, missing/empty record_name, invalid modes (including `:playback`).
-  - [ ] Input validation: `env` passed with block.
-- [ ] Matcher contract and failure reporting:
+  - [x] Input validation: `env` passed with block.
+- [x] Matcher contract and failure reporting:
   - [x] Default equality when matcher is nil (stdout/stderr/status).
   - [x] Keep default matcher/diff scoped to stdout/stderr/status (args/env ignored).
   - [x] Hash matcher validation (only `:all`, `:stdout`, `:stderr`, `:status`; values must be callable).
   - [x] `:all` + field matchers all execute (no short-circuit), and `failure_reason` includes all failing branches.
-  - [ ] Capture matchers still receive status placeholder `0` and ignore args/env differences unless matched explicitly.
-- [ ] Filter behavior:
-  - Filter applied for both run and capture, after scrubbing (current order), with explicit expectation of what the filter sees.
-  - Filter can remove keys/modify values; define expected behavior when filter returns nil or invalid shape.
-  - Spec only the happy path (filter returns a Hash); no validation on nil/invalid returns for now.
-- [ ] Credential scrubbing coverage:
+  - [x] Capture matchers still receive status placeholder `0` and ignore args/env differences unless matched explicitly.
+- [x] Filter behavior (happy path only):
+  - [x] Filter applied for both run and capture, after scrubbing (current order), with explicit expectation of what the filter sees.
+  - [x] Filter can remove keys/modify values; no validation on nil/invalid returns for now.
+- [x] Credential scrubbing coverage:
   - [x] Scrub stdout/stderr/args/env for run, captured stdout/stderr for block capture.
-  - [ ] Scrub nested args/hashes.
+  - [x] Scrub nested args/hashes.
   - [x] `scrub_credentials = false` across both run and capture.
-  - [ ] Verify custom patterns across run and capture.
-  - [ ] Ensure scrubbed output is what verification diffs and error messages display.
-- [ ] RecordResult/CommandDiff/VerificationError behavior:
-  - Diff output includes stdout/stderr/status deltas and preserves ordering.
-  - `RecordResult#error_message` handles command count mismatch vs content mismatches cleanly.
+  - [x] Verify custom patterns across run and capture.
+  - [x] Ensure scrubbed output is what verification diffs and error messages display.
+- [x] RecordResult/CommandDiff/VerificationError behavior:
+  - [x] Diff output includes stdout/stderr/status deltas and preserves ordering.
+  - [x] `RecordResult#error_message` handles command count mismatch vs content mismatches cleanly.
 
 ## Follow-up API Enhancements
 - [ ] Support splat args for command runs (`Backspin.run("ls", "-l", name: "record-name")`) while preserving the existing array and string forms.

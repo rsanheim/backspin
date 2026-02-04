@@ -70,6 +70,64 @@ RSpec.describe "Backspin credential scrubbing" do
     expect(record_data["commands"].first["env"]).to eq({"AWS_ACCESS_KEY_ID" => "********************"})
   end
 
+  it "scrubs credentials in nested args and hashes" do
+    api_key = "API_KEY=sk-1234567890abcdef1234567890abcdef"
+    command = Backspin::Command.new(
+      method_class: Open3::Capture3,
+      args: [
+        "echo",
+        ["AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"],
+        {"token" => api_key}
+      ],
+      stdout: "",
+      stderr: "",
+      status: 0
+    )
+
+    args = command.to_h["args"]
+
+    expect(args[1].first).to eq("AWS_ACCESS_KEY_ID=********************")
+    expect(args[2]["token"]).to eq("*" * api_key.length)
+  end
+
+  it "scrubs custom patterns for run records" do
+    secret = "MY_SECRET_ABC123"
+    Backspin.configure do |config|
+      config.add_credential_pattern(/MY_SECRET_[A-Z0-9]+/)
+    end
+
+    result = Backspin.run(["echo", secret], name: "custom_scrub_run")
+
+    record_data = YAML.load_file(result.record_path)
+    expect(record_data["commands"].first["stdout"]).to eq("#{"*" * secret.length}\n")
+  end
+
+  it "scrubs custom patterns for capture records" do
+    secret = "MY_SECRET_ABC123"
+    Backspin.configure do |config|
+      config.add_credential_pattern(/MY_SECRET_[A-Z0-9]+/)
+    end
+
+    result = Backspin.capture("custom_scrub_capture") do
+      puts secret
+    end
+
+    record_data = YAML.load_file(result.record_path)
+    expect(record_data["commands"].first["stdout"]).to eq("#{"*" * secret.length}\n")
+  end
+
+  it "scrubs output in verification diffs" do
+    Backspin.run(["echo", "token=AKIAIOSFODNN7EXAMPLE one"], name: "scrub_diff", mode: :record)
+
+    expect do
+      Backspin.run(["echo", "token=AKIAIOSFODNN7EXAMPLE two"], name: "scrub_diff")
+    end.to raise_error(Backspin::VerificationError) do |error|
+      expect(error.message).to include("token=******************** one")
+      expect(error.message).to include("token=******************** two")
+      expect(error.message).not_to include("AKIAIOSFODNN7EXAMPLE")
+    end
+  end
+
   it "scrubs credentials from captured output" do
     result = Backspin.capture("capture_scrub") do
       puts "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"

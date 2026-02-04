@@ -85,8 +85,13 @@ module Backspin
         raise RecordFormatError, "Invalid record format: expected format version #{FORMAT_VERSION}"
       end
 
+      commands = data["commands"]
+      unless commands.is_a?(Array)
+        raise RecordFormatError, "Invalid record format: missing commands"
+      end
+
       @first_recorded_at = data["first_recorded_at"]
-      @commands = data["commands"].map { |command_data| Command.from_h(command_data) }
+      @commands = commands.map { |command_data| Command.from_h(command_data) }
     rescue Psych::SyntaxError => e
       raise RecordFormatError, "Invalid record format: #{e.message}"
     end

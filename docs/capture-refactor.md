@@ -157,11 +157,11 @@ commands:
 ### Open Questions / Follow-ups
 
 From the plan document:
-* [ ] Add a default-behavior spec that calls `Backspin.run` twice with the same name (record then verify, no mode override).
-* [ ] Add outside-in integration specs with real commands (`echo`, `ls`, `date`) covering `:auto`/`:record`/`:verify`, plus string vs array command forms.
-* [ ] Rebuild behavior coverage for record/format errors, command type mismatch, command count mismatch, and invalid inputs (including `:playback`).
-* [ ] Expand matcher/filter/credential scrubbing coverage across both run and capture, including failure messaging and diff output.
-* [ ] Add negative tests for rejected modes/formats and missing records.
+* [x] Add a default-behavior spec that calls `Backspin.run` twice with the same name (record then verify, no mode override).
+* [x] Add outside-in integration specs with real commands (`echo`, `ls`, `date`) covering `:auto`/`:record`/`:verify`, plus string vs array command forms.
+* [x] Rebuild behavior coverage for record/format errors, command type mismatch, command count mismatch, and invalid inputs (including `:playback`).
+* [x] Expand matcher/filter/credential scrubbing coverage across both run and capture, including failure messaging and diff output.
+* [x] Add negative tests for rejected modes/formats and missing records.
 * [ ] Consider supporting splat args: `Backspin.run("ls", "-l", name: "test")`
 
 ## Verdict

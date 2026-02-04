@@ -92,6 +92,15 @@ RSpec.describe "Backspin.run" do
     expect(result).to be_verified
   end
 
+  it "overwrites existing records when mode is :record" do
+    Backspin.run(["echo", "first"], name: "record_overwrite", mode: :record)
+    Backspin.run(["echo", "second"], name: "record_overwrite", mode: :record)
+
+    record_path = Backspin.configuration.backspin_dir.join("record_overwrite.yml")
+    command = YAML.load_file(record_path)["commands"].first
+    expect(command["stdout"]).to eq("second\n")
+  end
+
   it "verifies matching output and raises on mismatch by default" do
     Backspin.run(["echo", "original"], name: "verify_command", mode: :record)
 
@@ -136,6 +145,14 @@ RSpec.describe "Backspin.run" do
     expect do
       Backspin.run(["echo", "hi"], name: "bad_env", env: "nope")
     end.to raise_error(ArgumentError, /env must be a Hash/)
+  end
+
+  it "rejects env when using a block" do
+    expect do
+      Backspin.run(name: "block_env", env: {"FOO" => "bar"}) do
+        puts "hi"
+      end
+    end.to raise_error(ArgumentError, /env is not supported when using a block/)
   end
 
   it "raises when verifying without a record" do

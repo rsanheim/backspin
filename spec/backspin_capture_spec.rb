@@ -113,6 +113,39 @@ RSpec.describe "Backspin.capture" do
     end.to raise_error(Backspin::RecordFormatError, /expected Backspin::Capturer/)
   end
 
+  it "returns a failed result when raise_on_verification_failure is false" do
+    Backspin.capture("capture_no_raise") do
+      puts "Expected output"
+    end
+
+    Backspin.configure do |config|
+      config.raise_on_verification_failure = false
+    end
+
+    result = Backspin.capture("capture_no_raise") do
+      puts "Different output"
+    end
+
+    expect(result.verified?).to be false
+    expect(result.error_message).to include("Output verification failed")
+  end
+
+  it "passes status 0 to capture matchers" do
+    Backspin.capture("capture_status") do
+      puts "Status output"
+    end
+
+    matcher = {
+      status: ->(recorded, actual) { recorded == 0 && actual == 0 }
+    }
+
+    result = Backspin.capture("capture_status", matcher: matcher) do
+      puts "Status output"
+    end
+
+    expect(result).to be_verified
+  end
+
   it "raises on verification mismatch by default" do
     Backspin.capture("capture_verify") do
       puts "Expected output"

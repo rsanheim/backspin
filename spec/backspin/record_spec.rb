@@ -99,4 +99,16 @@ RSpec.describe Backspin::Record do
       described_class.load_from_file(record_path)
     end.to raise_error(Backspin::RecordFormatError, /Unknown command type/)
   end
+
+  it "raises when commands are missing" do
+    FileUtils.mkdir_p(File.dirname(record_path))
+    File.write(record_path, {
+      "format_version" => "3.0",
+      "first_recorded_at" => "2024-01-01T00:00:00Z"
+    }.to_yaml)
+
+    expect do
+      described_class.load_from_file(record_path)
+    end.to raise_error(Backspin::RecordFormatError, /missing commands/i)
+  end
 end
