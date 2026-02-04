@@ -48,3 +48,6 @@
   - Record loading errors (invalid YAML, missing keys) and clearer error messages.
   - Scrubbing behavior across command args + env + captured block output.
 - [ ] Add a small set of focused negative tests to ensure we reject unsupported modes (`:playback`) and legacy formats consistently.
+
+## Follow-up API Enhancements
+- [ ] Support splat args for command runs (`Backspin.run("ls", "-l", name: "record-name")`) while preserving the existing array and string forms.
