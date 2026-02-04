@@ -68,4 +68,35 @@ RSpec.describe Backspin::Record do
 
     expect(record.commands.first.env).to eq({"FOO" => "bar"})
   end
+
+  it "raises on invalid YAML" do
+    FileUtils.mkdir_p(File.dirname(record_path))
+    File.write(record_path, "commands: [")
+
+    expect do
+      described_class.load_from_file(record_path)
+    end.to raise_error(Backspin::RecordFormatError, /Invalid record format/)
+  end
+
+  it "rejects unknown command types" do
+    FileUtils.mkdir_p(File.dirname(record_path))
+    File.write(record_path, {
+      "format_version" => "3.0",
+      "first_recorded_at" => "2024-01-01T00:00:00Z",
+      "commands" => [
+        {
+          "command_type" => "Kernel::System",
+          "args" => ["echo", "hello"],
+          "stdout" => "hello\n",
+          "stderr" => "",
+          "status" => 0,
+          "recorded_at" => "2024-01-01T00:00:00Z"
+        }
+      ]
+    }.to_yaml)
+
+    expect do
+      described_class.load_from_file(record_path)
+    end.to raise_error(Backspin::RecordFormatError, /Unknown command type/)
+  end
 end

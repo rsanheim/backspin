@@ -44,6 +44,43 @@ RSpec.describe "Backspin.run" do
     expect(command["args"]).to eq("echo hello")
   end
 
+  it "records then verifies by default when mode is omitted" do
+    result = Backspin.run(["echo", "auto"], name: "auto_default")
+
+    expect(result).to be_recorded
+    expect(result.mode).to eq(:record)
+
+    result = Backspin.run(["echo", "auto"], name: "auto_default")
+
+    expect(result).to be_verified
+    expect(result.mode).to eq(:verify)
+  end
+
+  it "runs real commands with array and string forms" do
+    Dir.mktmpdir("backspin_ls") do |dir|
+      File.write(File.join(dir, "a.txt"), "a")
+      File.write(File.join(dir, "b.txt"), "b")
+
+      result = Backspin.run(["ls", dir], name: "ls_array")
+      expect(result).to be_recorded
+      expect(result.stdout).to include("a.txt")
+      expect(result.stdout).to include("b.txt")
+
+      result = Backspin.run(["ls", dir], name: "ls_array")
+      expect(result).to be_verified
+    end
+
+    result = Backspin.run("echo hello", name: "echo_string")
+    expect(result.stdout).to eq("hello\n")
+    result = Backspin.run("echo hello", name: "echo_string")
+    expect(result).to be_verified
+
+    result = Backspin.run(["date", "+%Y"], name: "date_array")
+    expect(result.stdout).to match(/\A\d{4}\n\z/)
+    result = Backspin.run(["date", "+%Y"], name: "date_array")
+    expect(result).to be_verified
+  end
+
   it "verifies matching output and raises on mismatch by default" do
     Backspin.run(["echo", "original"], name: "verify_command", mode: :record)
 
@@ -70,6 +107,71 @@ RSpec.describe "Backspin.run" do
 
     expect(result.verified?).to be false
     expect(result.error_message).to include("Output verification failed")
+  end
+
+  it "requires a command when no block is provided" do
+    expect do
+      Backspin.run(name: "missing_command")
+    end.to raise_error(ArgumentError, /command is required/)
+  end
+
+  it "rejects an empty command array" do
+    expect do
+      Backspin.run([], name: "empty_command")
+    end.to raise_error(ArgumentError, /command array cannot be empty/)
+  end
+
+  it "rejects non-hash env values" do
+    expect do
+      Backspin.run(["echo", "hi"], name: "bad_env", env: "nope")
+    end.to raise_error(ArgumentError, /env must be a Hash/)
+  end
+
+  it "raises when verifying without a record" do
+    expect do
+      Backspin.run(["echo", "hi"], name: "missing_record", mode: :verify)
+    end.to raise_error(Backspin::RecordNotFoundError, /Record not found/)
+  end
+
+  it "raises when record has multiple commands for run verification" do
+    record_path = Backspin.configuration.backspin_dir.join("multi_command_verify.yml")
+    FileUtils.mkdir_p(File.dirname(record_path))
+    File.write(record_path, {
+      "format_version" => "3.0",
+      "first_recorded_at" => "2024-01-01T00:00:00Z",
+      "commands" => [
+        {
+          "command_type" => "Open3::Capture3",
+          "args" => ["echo", "one"],
+          "stdout" => "one\n",
+          "stderr" => "",
+          "status" => 0,
+          "recorded_at" => "2024-01-01T00:00:00Z"
+        },
+        {
+          "command_type" => "Open3::Capture3",
+          "args" => ["echo", "two"],
+          "stdout" => "two\n",
+          "stderr" => "",
+          "status" => 0,
+          "recorded_at" => "2024-01-01T00:00:00Z"
+        }
+      ]
+    }.to_yaml)
+
+    expect do
+      Backspin.run(["echo", "one"], name: "multi_command_verify", mode: :verify)
+    end.to raise_error(Backspin::RecordFormatError, /expected 1 command for run, found 2/)
+  end
+
+  it "raises when record command type is capture" do
+    Backspin.capture("capture_record") do
+      puts "capture"
+    end
+
+    expect do
+      Backspin.run(["echo", "capture"], name: "capture_record", mode: :verify)
+    end.to raise_error(Backspin::RecordFormatError, /expected Open3::Capture3/)
   end
 
   it "rejects playback mode" do

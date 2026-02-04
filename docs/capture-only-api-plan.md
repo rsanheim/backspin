@@ -41,13 +41,33 @@
 - [x] Update `CHANGELOG.md` with the breaking API change and bump version accordingly.
 
 ## Follow-up Spec Coverage
-- [ ] Rebuild coverage for behavior formerly tested via mock-based specs, rewritten for the new API surface:
-  - Command verification edge cases (record missing, format mismatch, command type mismatch).
-  - Matcher error paths and failure reasons (proc/hash/:all with failing branches).
-  - Record filters and custom matchers in both command and block capture paths.
-  - Record loading errors (invalid YAML, missing keys) and clearer error messages.
-  - Scrubbing behavior across command args + env + captured block output.
-- [ ] Add a small set of focused negative tests to ensure we reject unsupported modes (`:playback`) and legacy formats consistently.
+- [ ] Default behavior spec (no mode specified): call `Backspin.run` twice with the same name; first call records, second call verifies.
+- [ ] Outside-in integration specs with real commands (no mocks):
+  - `Backspin.run` array + string forms using `echo`/`ls`/`date` (macOS/Linux) to cover stdout/stderr/status.
+  - Validate `:auto` (record then verify), explicit `:record` overwrite, and explicit `:verify` missing-record error.
+  - `Backspin.capture` block that mixes `puts`, `$stdout.print`, `warn`, `system`, backticks, and `Open3.capture3`; ensure single-command record and placeholder status.
+  - Toggle `raise_on_verification_failure` for both run and capture paths.
+- [ ] Replace removed implementation specs with behavior-focused coverage:
+  - Record format errors: invalid YAML, missing keys, unknown `command_type`, legacy `format_version`, and multi-command records rejected for run/capture verify.
+  - Command type mismatch errors (capture record verified with run and vice versa).
+  - Input validation: missing command, empty command array, `env` not a Hash, `env` passed with block, missing/empty record_name, invalid modes (including `:playback`).
+- [ ] Matcher contract and failure reporting:
+  - Default equality when matcher is nil (stdout/stderr/status).
+  - Keep default matcher/diff scoped to stdout/stderr/status (args/env ignored).
+  - Hash matcher validation (only `:all`, `:stdout`, `:stderr`, `:status`; values must be callable).
+  - `:all` + field matchers all execute (no short-circuit), and `failure_reason` includes all failing branches.
+  - Capture matchers still receive status placeholder `0` and ignore args/env differences unless matched explicitly.
+- [ ] Filter behavior:
+  - Filter applied for both run and capture, after scrubbing (current order), with explicit expectation of what the filter sees.
+  - Filter can remove keys/modify values; define expected behavior when filter returns nil or invalid shape.
+  - Spec only the happy path (filter returns a Hash); no validation on nil/invalid returns for now.
+- [ ] Credential scrubbing coverage:
+  - Scrub stdout/stderr/args/env for run, captured stdout/stderr for block capture, including nested args/hashes.
+  - Verify custom patterns and `scrub_credentials = false` across both run and capture.
+  - Ensure scrubbed output is what verification diffs and error messages display.
+- [ ] RecordResult/CommandDiff/VerificationError behavior:
+  - Diff output includes stdout/stderr/status deltas and preserves ordering.
+  - `RecordResult#error_message` handles command count mismatch vs content mismatches cleanly.
 
 ## Follow-up API Enhancements
 - [ ] Support splat args for command runs (`Backspin.run("ls", "-l", name: "record-name")`) while preserving the existing array and string forms.

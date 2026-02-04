@@ -56,6 +56,63 @@ RSpec.describe "Backspin.capture" do
     expect(record_data["commands"].first["command_type"]).to eq("Backspin::Capturer")
   end
 
+  it "requires a record name" do
+    expect do
+      Backspin.capture("") { :ok }
+    end.to raise_error(ArgumentError, /record_name is required/)
+  end
+
+  it "requires a block" do
+    expect do
+      Backspin.capture("no_block")
+    end.to raise_error(ArgumentError, /block is required/)
+  end
+
+  it "raises when verifying without a record" do
+    expect do
+      Backspin.capture("missing_capture", mode: :verify) { puts "hi" }
+    end.to raise_error(Backspin::RecordNotFoundError, /Record not found/)
+  end
+
+  it "raises when record has multiple commands for capture verification" do
+    record_path = Backspin.configuration.backspin_dir.join("multi_capture_verify.yml")
+    FileUtils.mkdir_p(File.dirname(record_path))
+    File.write(record_path, {
+      "format_version" => "3.0",
+      "first_recorded_at" => "2024-01-01T00:00:00Z",
+      "commands" => [
+        {
+          "command_type" => "Backspin::Capturer",
+          "args" => ["<captured block>"],
+          "stdout" => "one\n",
+          "stderr" => "",
+          "status" => 0,
+          "recorded_at" => "2024-01-01T00:00:00Z"
+        },
+        {
+          "command_type" => "Backspin::Capturer",
+          "args" => ["<captured block>"],
+          "stdout" => "two\n",
+          "stderr" => "",
+          "status" => 0,
+          "recorded_at" => "2024-01-01T00:00:00Z"
+        }
+      ]
+    }.to_yaml)
+
+    expect do
+      Backspin.capture("multi_capture_verify", mode: :verify) { puts "hi" }
+    end.to raise_error(Backspin::RecordFormatError, /expected 1 command for capture, found 2/)
+  end
+
+  it "raises when record command type is run" do
+    Backspin.run(["echo", "run"], name: "run_record")
+
+    expect do
+      Backspin.capture("run_record", mode: :verify) { puts "capture" }
+    end.to raise_error(Backspin::RecordFormatError, /expected Backspin::Capturer/)
+  end
+
   it "raises on verification mismatch by default" do
     Backspin.capture("capture_verify") do
       puts "Expected output"
