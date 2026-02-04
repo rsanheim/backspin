@@ -160,10 +160,22 @@ RSpec.describe "Backspin matcher contract" do
 
     calls = []
     matcher_config = {
-      all: ->(_recorded, _actual) { calls << :all; false },
-      stdout: ->(_recorded, _actual) { calls << :stdout; false },
-      stderr: ->(_recorded, _actual) { calls << :stderr; false },
-      status: ->(_recorded, _actual) { calls << :status; false }
+      all: ->(_recorded, _actual) {
+        calls << :all
+        false
+      },
+      stdout: ->(_recorded, _actual) {
+        calls << :stdout
+        false
+      },
+      stderr: ->(_recorded, _actual) {
+        calls << :stderr
+        false
+      },
+      status: ->(_recorded, _actual) {
+        calls << :status
+        false
+      }
     }
 
     matcher = Backspin::Matcher.new(
