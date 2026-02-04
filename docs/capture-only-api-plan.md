@@ -29,13 +29,22 @@
 - Preserve the existing matcher contract (Proc, hash with fields, and `:all`) for both command and block capture paths.
 
 ## Plan
-1. Define the public API signature and behavior for the dual-mode `run` and the `capture` alias, including `env:` handling and the removal of `:playback`.
-2. Add high-level integration specs for the new API (command run + `env:`, block capture, capture alias, strict verification failure, and `raise_on_verification_failure` behavior) to drive implementation.
-3. Remove RSpec runtime dependency (`rspec-mocks`) and strip all mocking/stubbing paths from `Recorder`.
-4. Implement the command run path using `Open3.capture3` directly, recording a single `Open3::Capture3` command and verifying against it.
-5. Implement the block capture path using the tempfile redirection, recording a single `Backspin::Capturer` command with `status` placeholder `0` and the args marker.
-6. Update record loading and validation to accept only `Open3::Capture3` and `Backspin::Capturer`, bumping `Record::FORMAT_VERSION` and rejecting older formats.
-7. Update docs (`README.md`, `MATCHERS.md`) to show the new `run("command", name:, env:)` and block capture usage, document strict `run`, and note the placeholder `status` for block capture.
-8. Update the remaining tests and fixtures: remove `run!` specs, remove multi-command/playback specs, and refresh fixtures for the new signatures.
-9. Cleanup/refactor pass: delete legacy API paths, remove unused code, and verify docs/tests only reference the new API.
-10. Update `CHANGELOG.md` with the breaking API change and bump version accordingly.
+- [x] Define the public API signature and behavior for the dual-mode `run` and the `capture` alias, including `env:` handling and the removal of `:playback`.
+- [x] Add high-level integration specs for the new API (command run + `env:`, block capture, capture alias, strict verification failure, and `raise_on_verification_failure` behavior) to drive implementation.
+- [x] Remove RSpec runtime dependency (`rspec-mocks`) and strip all mocking/stubbing paths from `Recorder`.
+- [x] Implement the command run path using `Open3.capture3` directly, recording a single `Open3::Capture3` command and verifying against it.
+- [x] Implement the block capture path using the tempfile redirection, recording a single `Backspin::Capturer` command with `status` placeholder `0` and the args marker.
+- [x] Update record loading and validation to accept only `Open3::Capture3` and `Backspin::Capturer`, bumping `Record::FORMAT_VERSION` and rejecting older formats.
+- [x] Update docs (`README.md`, `MATCHERS.md`) to show the new `run("command", name:, env:)` and block capture usage, document strict `run`, and note the placeholder `status` for block capture.
+- [x] Update the remaining tests and fixtures: remove `run!` specs, remove multi-command/playback specs, and refresh fixtures for the new signatures.
+- [x] Cleanup/refactor pass: delete legacy API paths, remove unused code, and verify docs/tests only reference the new API.
+- [x] Update `CHANGELOG.md` with the breaking API change and bump version accordingly.
+
+## Follow-up Spec Coverage
+- [ ] Rebuild coverage for behavior formerly tested via mock-based specs, rewritten for the new API surface:
+  - Command verification edge cases (record missing, format mismatch, command type mismatch).
+  - Matcher error paths and failure reasons (proc/hash/:all with failing branches).
+  - Record filters and custom matchers in both command and block capture paths.
+  - Record loading errors (invalid YAML, missing keys) and clearer error messages.
+  - Scrubbing behavior across command args + env + captured block output.
+- [ ] Add a small set of focused negative tests to ensure we reject unsupported modes (`:playback`) and legacy formats consistently.
