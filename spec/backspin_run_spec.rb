@@ -81,6 +81,17 @@ RSpec.describe "Backspin.run" do
     expect(result).to be_verified
   end
 
+  it "captures stderr and non-zero exit status for failing commands" do
+    result = Backspin.run(["sh", "-c", "echo error >&2; exit 1"], name: "stderr_status")
+    expect(result).to be_recorded
+    expect(result.stdout).to eq("")
+    expect(result.stderr).to eq("error\n")
+    expect(result.status).to eq(1)
+
+    result = Backspin.run(["sh", "-c", "echo error >&2; exit 1"], name: "stderr_status")
+    expect(result).to be_verified
+  end
+
   it "verifies matching output and raises on mismatch by default" do
     Backspin.run(["echo", "original"], name: "verify_command", mode: :record)
 
