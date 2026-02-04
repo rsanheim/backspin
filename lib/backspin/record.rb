@@ -3,10 +3,8 @@
 module Backspin
   class RecordFormatError < StandardError; end
 
-  class NoMoreRecordingsError < StandardError; end
-
   class Record
-    FORMAT_VERSION = "2.0"
+    FORMAT_VERSION = "3.0"
     attr_reader :path, :commands, :first_recorded_at
 
     def self.load_or_create(path)
@@ -39,7 +37,6 @@ module Backspin
       @path = path
       @commands = []
       @first_recorded_at = nil
-      @playback_index = 0
     end
 
     def add_command(command)
@@ -60,9 +57,7 @@ module Backspin
 
     def reload
       @commands = []
-      @playback_index = 0
       load_from_file if File.exist?(@path)
-      @playback_index = 0 # Reset again after loading to ensure it's at 0
     end
 
     def exists?
@@ -77,17 +72,8 @@ module Backspin
       @commands.size
     end
 
-    def next_command
-      raise NoMoreRecordingsError, "No more recordings available for replay" if @playback_index >= @commands.size
-
-      command = @commands[@playback_index]
-      @playback_index += 1
-      command
-    end
-
     def clear
       @commands = []
-      @playback_index = 0
     end
 
     # private
@@ -95,8 +81,8 @@ module Backspin
     def load_from_file
       data = YAML.load_file(@path.to_s)
 
-      unless data.is_a?(Hash) && data["format_version"] == "2.0"
-        raise RecordFormatError, "Invalid record format: expected format version 2.0"
+      unless data.is_a?(Hash) && data["format_version"] == FORMAT_VERSION
+        raise RecordFormatError, "Invalid record format: expected format version #{FORMAT_VERSION}"
       end
 
       @first_recorded_at = data["first_recorded_at"]

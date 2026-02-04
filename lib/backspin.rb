@@ -4,8 +4,6 @@ require "yaml"
 require "fileutils"
 require "open3"
 require "pathname"
-require "ostruct"
-require "rspec/mocks"
 require "backspin/version"
 require "backspin/configuration"
 require "backspin/command_result"
@@ -40,9 +38,6 @@ module Backspin
     end
   end
 
-  # Include RSpec mocks methods
-  extend RSpec::Mocks::ExampleMethods
-
   class << self
     def configuration
       return @configuration if @configuration
@@ -72,86 +67,32 @@ module Backspin
 
     # Primary API - records on first run, verifies on subsequent runs
     #
-    # @param record_name [String] Name for the record file
-    # @param mode [Symbol] Recording mode - :auto, :record, :verify, :playback
-    # @param matcher [Proc, Hash] Custom matcher for verification
-    #   - Proc: ->(recorded, actual) { ... } for full command matching
-    #   - Hash: { stdout: ->(recorded, actual) { ... }, stderr: ->(recorded, actual) { ... } } for field-specific matching
-    #     Only specified fields are checked - fields without matchers are ignored
-    #   - Hash with :all key: { all: ->(recorded, actual) { ... } } receives full command hashes
-    #     Can be combined with field matchers - all specified matchers must pass
-    # @param filter [Proc] Custom filter for recorded data
-    # @return [RecordResult] Result object with output and status
-    def run(record_name, mode: :auto, matcher: nil, filter: nil, &block)
-      raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
-      raise ArgumentError, "block is required" unless block_given?
-
-      record_path = Record.build_record_path(record_name)
-      mode = determine_mode(mode, record_path)
-
-      # Create or load the record based on mode
-      record = if mode == :record
-        Record.create(record_name)
-      else
-        Record.load_or_create(record_path)
-      end
-
-      # Create recorder with all needed context
-      recorder = Recorder.new(record: record, mode: mode, matcher: matcher, filter: filter)
-
-      # Execute the appropriate mode
-      result = case mode
-      when :record
-        recorder.setup_recording_stubs(:capture3, :system)
-        recorder.perform_recording(&block)
-      when :verify
-        recorder.perform_verification(&block)
-      when :playback
-        recorder.perform_playback(&block)
-      else
-        raise ArgumentError, "Unknown mode: #{mode}"
-      end
-
-      # Check if we should raise on verification failure
-      if configuration.raise_on_verification_failure && result.verified? == false
-        error_message = "Backspin verification failed!\n"
-        error_message += "Record: #{result.record.path}\n"
-        error_message += "\n#{result.error_message}" if result.error_message
-
-        raise RSpec::Expectations::ExpectationNotMetError, error_message
-      end
-
-      result
-    end
-
-    # Strict version of run that raises on verification failure
-    #
-    # @param record_name [String] Name for the record file
-    # @param mode [Symbol] Recording mode - :auto, :record, :verify, :playback
+    # @param command [String, Array] Command to execute via Open3.capture3
+    # @param name [String] Name for the record file
+    # @param env [Hash] Environment variables to pass to Open3.capture3
+    # @param mode [Symbol] Recording mode - :auto, :record, :verify
     # @param matcher [Proc, Hash] Custom matcher for verification
     # @param filter [Proc] Custom filter for recorded data
     # @return [RecordResult] Result object with output and status
-    # @raise [RSpec::Expectations::ExpectationNotMetError] If verification fails
-    def run!(record_name, mode: :auto, matcher: nil, filter: nil, &block)
-      result = run(record_name, mode: mode, matcher: matcher, filter: filter, &block)
+    def run(command = nil, name:, env: nil, mode: :auto, matcher: nil, filter: nil, &block)
+      raise ArgumentError, "name is required" if name.nil? || name.empty?
 
-      if result.verified? == false
-        error_message = "Backspin verification failed!\n"
-        error_message += "Record: #{result.record.path}\n"
+      if block_given?
+        raise ArgumentError, "command must be omitted when using a block" unless command.nil?
+        raise ArgumentError, "env is not supported when using a block" unless env.nil?
 
-        # Use the error_message from the result which is now properly formatted
-        error_message += "\n#{result.error_message}" if result.error_message
-
-        raise RSpec::Expectations::ExpectationNotMetError, error_message
+        return perform_capture(name, mode: mode, matcher: matcher, filter: filter, &block)
       end
 
-      result
+      raise ArgumentError, "command is required" if command.nil?
+
+      perform_command_run(command, name: name, env: env, mode: mode, matcher: matcher, filter: filter)
     end
 
     # Captures all stdout/stderr output from a block
     #
     # @param record_name [String] Name for the record file
-    # @param mode [Symbol] Recording mode - :auto, :record, :verify, :playback
+    # @param mode [Symbol] Recording mode - :auto, :record, :verify
     # @param matcher [Proc, Hash] Custom matcher for verification
     # @param filter [Proc] Custom filter for recorded data
     # @return [RecordResult] Result object with captured output
@@ -159,55 +100,146 @@ module Backspin
       raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
       raise ArgumentError, "block is required" unless block_given?
 
+      perform_capture(record_name, mode: mode, matcher: matcher, filter: filter, &block)
+    end
+
+    private
+
+    def perform_capture(record_name, mode:, matcher:, filter:, &block)
       record_path = Record.build_record_path(record_name)
       mode = determine_mode(mode, record_path)
+      validate_mode!(mode)
 
-      # Create or load the record based on mode
       record = if mode == :record
         Record.create(record_name)
       else
         Record.load_or_create(record_path)
       end
 
-      # Create recorder with all needed context
       recorder = Recorder.new(record: record, mode: mode, matcher: matcher, filter: filter)
 
-      # Execute the appropriate mode
       result = case mode
       when :record
         recorder.perform_capture_recording(&block)
       when :verify
         recorder.perform_capture_verification(&block)
-      when :playback
-        recorder.perform_capture_playback(&block)
       else
         raise ArgumentError, "Unknown mode: #{mode}"
       end
 
-      # Check if we should raise on verification failure
-      if configuration.raise_on_verification_failure && result.verified? == false
-        error_message = "Backspin verification failed!\n"
-        error_message += "Record: #{result.record.path}\n"
-        error_message += result.error_message || "Output verification failed"
-
-        # Include diff if available
-        if result.diff
-          error_message += "\n\nDiff:\n#{result.diff}"
-        end
-
-        raise VerificationError.new(error_message, result: result)
-      end
+      raise_on_verification_failure!(result)
 
       result
     end
 
-    private
+    def perform_command_run(command, name:, env:, mode:, matcher:, filter:)
+      record_path = Record.build_record_path(name)
+      mode = determine_mode(mode, record_path)
+      validate_mode!(mode)
+
+      record = if mode == :record
+        Record.create(name)
+      else
+        Record.load_or_create(record_path)
+      end
+
+      normalized_env = normalize_env(env)
+
+      result = case mode
+      when :record
+        stdout, stderr, status = execute_command(command, normalized_env)
+        command_result = Command.new(
+          method_class: Open3::Capture3,
+          args: command,
+          env: normalized_env,
+          stdout: stdout,
+          stderr: stderr,
+          status: status.exitstatus,
+          recorded_at: Time.now.iso8601
+        )
+        record.add_command(command_result)
+        record.save(filter: filter)
+        RecordResult.new(output: [stdout, stderr, status], mode: :record, record: record)
+      when :verify
+        raise RecordNotFoundError, "Record not found: #{record.path}" unless record.exists?
+        raise RecordNotFoundError, "No commands found in record #{record.path}" if record.empty?
+        if record.commands.size != 1
+          raise RecordFormatError, "Invalid record format: expected 1 command for run, found #{record.commands.size}"
+        end
+
+        stdout, stderr, status = execute_command(command, normalized_env)
+        actual_command = Command.new(
+          method_class: Open3::Capture3,
+          args: command,
+          env: normalized_env,
+          stdout: stdout,
+          stderr: stderr,
+          status: status.exitstatus
+        )
+        recorded_command = record.commands.first
+        unless recorded_command.method_class == Open3::Capture3
+          raise RecordFormatError, "Invalid record format: expected Open3::Capture3 for run"
+        end
+        command_diff = CommandDiff.new(recorded_command: recorded_command, actual_command: actual_command, matcher: matcher)
+        RecordResult.new(
+          output: [stdout, stderr, status],
+          mode: :verify,
+          verified: command_diff.verified?,
+          record: record,
+          command_diffs: [command_diff]
+        )
+      else
+        raise ArgumentError, "Unknown mode: #{mode}"
+      end
+
+      raise_on_verification_failure!(result)
+
+      result
+    end
+
+    def normalize_env(env)
+      return nil if env.nil?
+      raise ArgumentError, "env must be a Hash" unless env.is_a?(Hash)
+
+      env.empty? ? nil : env
+    end
+
+    def execute_command(command, env)
+      case command
+      when String
+        env ? Open3.capture3(env, command) : Open3.capture3(command)
+      when Array
+        raise ArgumentError, "command array cannot be empty" if command.empty?
+        env ? Open3.capture3(env, *command) : Open3.capture3(*command)
+      else
+        raise ArgumentError, "command must be a String or Array"
+      end
+    end
+
+    def raise_on_verification_failure!(result)
+      return unless configuration.raise_on_verification_failure && result.verified? == false
+
+      error_message = "Backspin verification failed!\n"
+      error_message += "Record: #{result.record.path}\n"
+      error_message += "\n#{result.error_message}" if result.error_message
+      error_message += "\n\nDiff:\n#{result.diff}" if result.diff
+
+      raise VerificationError.new(error_message, result: result)
+    end
 
     def determine_mode(mode_option, record_path)
       return mode_option if mode_option && mode_option != :auto
 
       # Auto mode: record if file doesn't exist, verify if it does
       File.exist?(record_path) ? :verify : :record
+    end
+
+    def validate_mode!(mode)
+      return if %i[record verify].include?(mode)
+
+      raise ArgumentError, "Playback mode is not supported" if mode == :playback
+
+      raise ArgumentError, "Unknown mode: #{mode}"
     end
   end
 end

@@ -34,11 +34,6 @@ module Backspin
       @verified
     end
 
-    # @return [Boolean] true if this result is from playback mode
-    def playback?
-      mode == :playback
-    end
-
     # @return [String, nil] Human-readable error message if verification failed
     def error_message
       return nil unless verified? == false
@@ -142,7 +137,6 @@ module Backspin
       hash = {
         mode: mode,
         recorded: recorded?,
-        playback: playback?,
         stdout: stdout,
         stderr: stderr,
         status: status

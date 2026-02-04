@@ -1,9 +1,7 @@
 PATH
   remote: .
   specs:
-    backspin (0.7.1)
-      ostruct
-      rspec-mocks (~> 3)
+    backspin (0.8.0)
 
 GEM
   remote: https://rubygems.org/
@@ -13,7 +11,6 @@ GEM
     json (2.16.0)
     language_server-protocol (3.17.0.5)
     lint_roller (1.1.0)
-    ostruct (0.6.1)
     parallel (1.27.0)
     parser (3.3.10.0)
       ast (~> 2.4.1)

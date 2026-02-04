@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0 - 2026-02-05
+* Breaking: new `Backspin.run("command", name:, env:)` command API plus block capture via `Backspin.run(name:) { ... }` and `Backspin.capture("name") { ... }`
+* Breaking: remove `run!` and `:playback`
+* Breaking: drop RSpec dependency; verification failures raise `Backspin::VerificationError`
+* Breaking: record format bumped to 3.0 and only `Open3::Capture3` / `Backspin::Capturer` records are accepted
+* Scrub credential patterns apply to stdout, stderr, args, and env values
+
 ## 0.7.1 - 2025-12-02
 * Include result object on VerificationError to make it easier for callers to debug verification errors
 

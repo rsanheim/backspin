@@ -2,7 +2,8 @@
 # frozen_string_literal: true
 
 require "bundler/inline"
-require "open3"
+
+# Example usage of Backspin matchers
 
 gemfile do
   source "https://rubygems.org"
@@ -13,24 +14,18 @@ end
 puts "Example 1: Matching timestamps with custom matcher"
 puts "-" * 50
 
-# First run: Record the output
-result = Backspin.run("timestamp_example") do
-  Open3.capture3("date '+%Y-%m-%d %H:%M:%S'")
-end
+result = Backspin.run(["date", "+%Y-%m-%d %H:%M:%S"], name: "timestamp_example")
 puts "Recorded: #{result.stdout.chomp}"
 
-# Sleep to ensure different timestamp
 sleep 1
 
-# Second run: Verify with custom matcher
-result = Backspin.run("timestamp_example",
-  match_on: [:stdout, lambda { |recorded, actual|
-    # Both should have the same date format
-    recorded.match?(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/) &&
-    actual.match?(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)
-  }]) do
-  Open3.capture3("date '+%Y-%m-%d %H:%M:%S'")
-end
+result = Backspin.run(["date", "+%Y-%m-%d %H:%M:%S"], name: "timestamp_example",
+  matcher: {
+    stdout: ->(recorded, actual) {
+      recorded.match?(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/) &&
+        actual.match?(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)
+    }
+  })
 
 puts "Current:  #{result.stdout.chomp}"
 puts "Verified: #{result.verified?}"
@@ -40,35 +35,23 @@ puts
 puts "Example 2: Matching multiple fields with different patterns"
 puts "-" * 50
 
-# Record a command with dynamic content
-Backspin.run("multi_field_example") do
-  script = <<~BASH
-    echo "PID: $$"
-    echo "Error: Timeout at $(date '+%H:%M:%S')" >&2
-    exit 1
-  BASH
-  Open3.capture3("bash", "-c", script)
-end
+script = <<~SH
+  echo "PID: $$"
+  echo "Error: Timeout at $(date '+%H:%M:%S')" >&2
+  exit 1
+SH
 
-# Verify with different PID and timestamp
-result = Backspin.run("multi_field_example",
-  match_on: [
-    [:stdout, lambda { |recorded, actual|
-      # Both should have PID format
+Backspin.run(["sh", "-c", script], name: "multi_field_example")
+
+result = Backspin.run(["sh", "-c", script], name: "multi_field_example",
+  matcher: {
+    stdout: ->(recorded, actual) {
       recorded.match?(/PID: \d+/) && actual.match?(/PID: \d+/)
-    }],
-    [:stderr, lambda { |recorded, actual|
-      # Both should have timeout error, ignore timestamp
+    },
+    stderr: ->(recorded, actual) {
       recorded.match?(/Error: Timeout at/) && actual.match?(/Error: Timeout at/)
-    }]
-  ]) do
-  script = <<~BASH
-    echo "PID: $$"
-    echo "Error: Timeout at $(date '+%H:%M:%S')" >&2
-    exit 1
-  BASH
-  Open3.capture3("bash", "-c", script)
-end
+    }
+  })
 
 puts "Stdout:   #{result.stdout.chomp}"
 puts "Stderr:   #{result.stderr.chomp}"
@@ -80,37 +63,25 @@ puts
 puts "Example 3: Mixed field matching"
 puts "-" * 50
 
-# Record with specific values
-Backspin.run("mixed_matching") do
-  script = <<~BASH
-    echo "Version: 1.2.3"
-    echo "Build: $(date +%s)"
-    echo "Status: OK"
-  BASH
-  Open3.capture3("bash", "-c", script)
-end
+script = <<~SH
+  echo "Version: 1.2.3"
+  echo "Build: $(date +%s)"
+  echo "Status: OK"
+SH
 
-# Verify - stdout uses custom matcher, stderr must match exactly
-result = Backspin.run("mixed_matching",
-  match_on: [:stdout, lambda { |recorded, actual|
-    # Version and Status must match, Build can differ
-    recorded_lines = recorded.lines
-    actual_lines = actual.lines
+Backspin.run(["sh", "-c", script], name: "mixed_matching")
 
-    recorded_lines[0] == actual_lines[0] && # Version line must match
-    recorded_lines[1].start_with?("Build:") && actual_lines[1].start_with?("Build:") && # Build line format
-    recorded_lines[2] == actual_lines[2] # Status line must match
-  }]) do
-  script = <<~BASH
-    echo "Version: 1.2.3"
-    echo "Build: $(date +%s)"
-    echo "Status: OK"
-  BASH
-  Open3.capture3("bash", "-c", script)
-end
+result = Backspin.run(["sh", "-c", script], name: "mixed_matching",
+  matcher: {
+    stdout: ->(recorded, actual) {
+      recorded_lines = recorded.lines
+      actual_lines = actual.lines
+
+      recorded_lines[0] == actual_lines[0] &&
+        recorded_lines[1].start_with?("Build:") && actual_lines[1].start_with?("Build:") &&
+        recorded_lines[2] == actual_lines[2]
+    }
+  })
 
 puts "Output:\n#{result.stdout}"
 puts "Verified: #{result.verified?}"
-
-# Cleanup
-FileUtils.rm_rf("fixtures/backspin")

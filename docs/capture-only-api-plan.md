@@ -7,10 +7,10 @@
   - `Backspin.run("command here", name: "record-name", env: {"MY_ENV_VAR" => "value"})` runs `Open3.capture3` directly and records stdout/stderr/status.
   - also support Backspin.run(["command", "here"], name: "record-name")
   - capture3 supports _both_ argument forms, and the string form invokes a shell, while the array form does not.
-   - our examples should prioritize the array form, as it is safer and generally recommended
+    - our examples should prioritize the array form, as it is safer and generally recommended
   - NOTE: if 'env' is NOT provided, we do not record the env hash or pass it to capture3
   - `Backspin.run(name: "record-name") { ... }` uses the tempfile capture approach and records a single `Backspin::Capturer` entry.
-  - `Backspin.capture("record-name") { ... }` is a thin alias to the block form of `run` that uses the tempfile capture approach - note that we don't support the 'name:' keyword here, as there is no reason to (this does not suppport command args)
+  - `Backspin.capture("record-name") { ... }` is a thin alias to the block form of `run` that uses the tempfile capture approach - note that we don't support the 'name:' keyword here, as there is no reason to (this does not support command args)
 - Records remain type-specific: command runs store `Open3::Capture3` entries (args preserved as passed, env hash included if provided); block capture stores a `Backspin::Capturer` entry with the args marker and `status` placeholder `0`.
 - Playback is removed; block capture can run multiple commands but records them as a single combined stdout/stderr snapshot.
 - Backwards compatibility is explicitly not required, so we can break signatures, record formats, and drop Open3/system stubbing entirely.
@@ -20,8 +20,8 @@
 - Remove `:playback` support.
 - Keep `status` as a placeholder (`0`) for block capture; only command runs have meaningful exit status.
 - Keep the `"<captured block>"` args marker for capture records.
-- Require `name:` keyword for `run` and `capture`.
-- Keep `Backspin.capture` as an alias to the block form of `run`.
+- Require `name:` keyword for `run`; `capture` uses a positional record name.
+- Keep `Backspin.capture` as an alias to the block form of `run` (positional only).
 - Make `run` strict by default and remove `run!`.
 - Bump `Record::FORMAT_VERSION` and hard-reject legacy records.
 - Always scrub stdout/stderr, args, and env values using the current credential patterns (defaults + user-provided).
