@@ -165,6 +165,11 @@ module Backspin
           raise RecordFormatError, "Invalid record format: expected 1 command for run, found #{record.commands.size}"
         end
 
+        recorded_command = record.commands.first
+        unless recorded_command.method_class == Open3::Capture3
+          raise RecordFormatError, "Invalid record format: expected Open3::Capture3 for run"
+        end
+
         stdout, stderr, status = execute_command(command, normalized_env)
         actual_command = Command.new(
           method_class: Open3::Capture3,
@@ -174,10 +179,6 @@ module Backspin
           stderr: stderr,
           status: status.exitstatus
         )
-        recorded_command = record.commands.first
-        unless recorded_command.method_class == Open3::Capture3
-          raise RecordFormatError, "Invalid record format: expected Open3::Capture3 for run"
-        end
         command_diff = CommandDiff.new(recorded_command: recorded_command, actual_command: actual_command, matcher: matcher)
         RecordResult.new(
           output: [stdout, stderr, status],
@@ -218,8 +219,8 @@ module Backspin
 
       error_message = "Backspin verification failed!\n"
       error_message += "Record: #{result.record.path}\n"
-      error_message += "\n#{result.error_message}" if result.error_message
-      error_message += "\n\nDiff:\n#{result.diff}" if result.diff
+      details = result.error_message || result.diff
+      error_message += "\n#{details}" if details
 
       raise VerificationError.new(error_message, result: result)
     end

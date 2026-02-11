@@ -116,6 +116,17 @@ RSpec.describe "Backspin.run" do
     end
   end
 
+  it "does not duplicate diff sections in verification errors" do
+    Backspin.run(["echo", "original"], name: "verify_command_single_diff", mode: :record)
+
+    expect do
+      Backspin.run(["echo", "different"], name: "verify_command_single_diff")
+    end.to raise_error(Backspin::VerificationError) do |error|
+      expect(error.message).not_to include("\n\nDiff:\n")
+      expect(error.message.scan("[stdout]").length).to eq(1)
+    end
+  end
+
   it "returns a failed result when raise_on_verification_failure is false" do
     Backspin.run(["echo", "expected"], name: "config_no_raise")
 
@@ -200,6 +211,23 @@ RSpec.describe "Backspin.run" do
     expect do
       Backspin.run(["echo", "capture"], name: "capture_record", mode: :verify)
     end.to raise_error(Backspin::RecordFormatError, /expected Open3::Capture3/)
+  end
+
+  it "does not execute verify commands when record command type is capture" do
+    Backspin.capture("capture_record_no_exec") do
+      puts "capture"
+    end
+    marker_path = Backspin.configuration.backspin_dir.join("should_not_exist.txt")
+
+    expect do
+      Backspin.run(
+        ["ruby", "-e", "File.write(ARGV.fetch(0), 'bad')", marker_path.to_s],
+        name: "capture_record_no_exec",
+        mode: :verify
+      )
+    end.to raise_error(Backspin::RecordFormatError, /expected Open3::Capture3/)
+
+    expect(marker_path).not_to exist
   end
 
   it "rejects playback mode" do
