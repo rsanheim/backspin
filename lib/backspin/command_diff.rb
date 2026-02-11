@@ -28,17 +28,23 @@ module Backspin
       return nil if verified?
 
       parts = []
+      recorded_hash = recorded_command.to_h
+      actual_hash = actual_command.to_h
 
       unless method_classes_match?
         parts << "Command type mismatch: expected #{recorded_command.method_class.name}, got #{actual_command.method_class.name}"
       end
 
-      parts << stdout_diff if recorded_command.stdout != actual_command.stdout
+      if recorded_hash["stdout"] != actual_hash["stdout"]
+        parts << stdout_diff(recorded_hash["stdout"], actual_hash["stdout"])
+      end
 
-      parts << stderr_diff if recorded_command.stderr != actual_command.stderr
+      if recorded_hash["stderr"] != actual_hash["stderr"]
+        parts << stderr_diff(recorded_hash["stderr"], actual_hash["stderr"])
+      end
 
-      if recorded_command.status != actual_command.status
-        parts << "Exit status: expected #{recorded_command.status}, got #{actual_command.status}"
+      if recorded_hash["status"] != actual_hash["status"]
+        parts << "Exit status: expected #{recorded_hash["status"]}, got #{actual_hash["status"]}"
       end
 
       parts.join("\n\n")
@@ -67,12 +73,12 @@ module Backspin
       @matcher.failure_reason
     end
 
-    def stdout_diff
-      "[stdout]\n#{generate_line_diff(recorded_command.stdout, actual_command.stdout)}"
+    def stdout_diff(expected, actual)
+      "[stdout]\n#{generate_line_diff(expected, actual)}"
     end
 
-    def stderr_diff
-      "[stderr]\n#{generate_line_diff(recorded_command.stderr, actual_command.stderr)}"
+    def stderr_diff(expected, actual)
+      "[stderr]\n#{generate_line_diff(expected, actual)}"
     end
 
     def generate_line_diff(expected, actual)

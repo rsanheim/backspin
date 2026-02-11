@@ -8,7 +8,7 @@ module Backspin
     attr_accessor :scrub_credentials
     # The directory where backspin will store its files - defaults to fixtures/backspin
     attr_accessor :backspin_dir
-    # Whether to raise an exception when verification fails in `run` method - defaults to true
+    # Whether to raise an exception when verification fails in `run`/`capture` - defaults to true
     attr_accessor :raise_on_verification_failure
     # Regex patterns to scrub from saved output
     attr_reader :credential_patterns

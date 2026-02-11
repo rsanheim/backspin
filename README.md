@@ -5,7 +5,7 @@
 [![CircleCI](https://img.shields.io/circleci/build/github/rsanheim/backspin/main)](https://circleci.com/gh/rsanheim/backspin)
 [![Last Commit](https://img.shields.io/github/last-commit/rsanheim/backspin/main)](https://github.com/rsanheim/backspin/commits/main)
 
-Backspin records and replays CLI interactions in Ruby for easy snapshot testing of command-line interfaces. Currently supports `Open3.capture3` and `system` and requires `rspec`, as it uses `rspec-mocks` under the hood.
+Backspin records command output and block output in Ruby for easy snapshot testing of command-line interfaces. It supports direct command runs via `Open3.capture3` and block capture for more complex scenarios.
 
 **NOTE:** Backspin should be considered alpha while pre version 1.0. It is in heavy development along-side some real-world CLI apps, so expect things to change and mature.
 
@@ -13,11 +13,11 @@ Inspired by [VCR](https://github.com/vcr/vcr) and other [characterization (aka g
 
 ## Overview
 
-Backspin is a Ruby library for snapshot testing (or characterization testing) of command-line interfaces. While VCR records and replays HTTP interactions, Backspin records and replays CLI interactions - capturing stdout, stderr, and exit status from shell commands. 
+Backspin is a Ruby library for snapshot testing (or characterization testing) of command-line interfaces. While VCR records and replays HTTP interactions, Backspin records stdout, stderr, and exit status from shell commands, or captures all output from a block.
 
 ## Installation
 
-Requires Ruby 3+ and will use rspec-mocks under the hood...Backspin has not been tested in other test frameworks.
+Requires Ruby 3+.
 
 Add this line to your application's Gemfile in the `:test` group:
 
@@ -31,7 +31,7 @@ And then run `bundle install`.
 
 ## Usage
 
-### Quick Start
+### Quick Start (Command Runs)
 
 The simplest way to use Backspin is with the `run` method, which automatically records on the first execution and verifies on subsequent runs.
 
@@ -39,23 +39,41 @@ The simplest way to use Backspin is with the `run` method, which automatically r
 require "backspin"
 
 # First run: records the output
-result = Backspin.run("my_command") do
-  Open3.capture3("echo hello world")
-end
+result = Backspin.run(["echo", "hello world"], name: "my_command")
 
 # Subsequent runs: verifies the output matches and raises on mismatch
-Backspin.run("my_command") do
-  Open3.capture3("echo hello world")  # Passes - output matches
-end
+Backspin.run(["echo", "hello world"], name: "my_command")
 
 # This will raise an error automatically
-Backspin.run("my_command") do
-  Open3.capture3("echo hello mars")  
-end
-# Raises RSpec::Expectations::ExpectationNotMetError because output doesn't match
+Backspin.run(["echo", "hello mars"], name: "my_command")
+# Raises Backspin::VerificationError because output doesn't match
 ```
 
-By default, `Backspin.run` will raise an exception when verification fails, making your tests fail automatically. This is the recommended approach for most scenarios.
+You can also pass a string command (which invokes a shell):
+
+```ruby
+Backspin.run("echo hello", name: "string_command")
+```
+
+### Block Capture
+
+Use block capture when you need to run multiple commands or use APIs that already write to stdout/stderr:
+
+```ruby
+# Capture all output from the block
+result = Backspin.run(name: "block_capture") do
+  system("echo from system")
+  puts "from puts"
+  `echo from backticks`
+end
+
+# Alias form
+Backspin.capture("block_capture") do
+  puts "from capture"
+end
+```
+
+Block capture records a single combined stdout/stderr snapshot. Exit status is a placeholder (`0`) in this mode.
 
 ### Recording Modes
 
@@ -63,48 +81,29 @@ Backspin supports different modes for controlling how commands are recorded and 
 
 ```ruby
 # Auto mode (default): Record on first run, verify on subsequent runs
-result = Backspin.run("my_command") do
-  Open3.capture3("echo hello")
-end
+Backspin.run(["echo", "hello"], name: "my_command")
 
 # Explicit record mode: Always record, overwriting existing recordings
-result = Backspin.run("echo_test", mode: :record) do
-  Open3.capture3("echo hello")
-end
-# This will save the output to `fixtures/backspin/echo_test.yml`.
+Backspin.run(["echo", "hello"], name: "echo_test", mode: :record)
 
 # Explicit verify mode: Always verify against existing recording
-result = Backspin.run("echo_test", mode: :verify) do
-  Open3.capture3("echo hello")
-end
+result = Backspin.run(["echo", "hello"], name: "echo_test", mode: :verify)
 expect(result.verified?).to be true
-
-# Playback mode: Return recorded output without running the command
-result = Backspin.run("slow_command", mode: :playback) do
-  Open3.capture3("slow_command")  # Not executed - returns recorded output
-end
 ```
 
-### The run! method
-
-**NOTE:** This method is deprecated and will be removed soon.
-
-The `run!` method is maintained for backwards compatibility and works identically to `run`. Since `run` now raises on verification failure by default, both methods behave the same way:
+### Environment Variables
 
 ```ruby
-# Both of these are equivalent and will raise on verification failure
-Backspin.run("echo_test") do
-  Open3.capture3("echo hello")
-end
-
-Backspin.run!("echo_test") do
-  Open3.capture3("echo hello")
-end
+Backspin.run(
+  ["ruby", "-e", "print ENV.fetch('MY_ENV_VAR')"],
+  name: "with_env",
+  env: {"MY_ENV_VAR" => "value"}
+)
 ```
 
-For new code, we recommend using `run` as it's the primary API method.
+If `env:` is not provided, it is not passed to `Open3.capture3` and is not recorded.
 
-### Custom matchers
+### Custom Matchers
 
 For cases where full matching isn't suitable, you can override via `matcher:`. **NOTE**: If you provide
 custom matchers, that is the only matching that will be done. Default matching is skipped if user-provided
@@ -113,14 +112,11 @@ matchers are present.
 You can override the full match logic with a proc:
 
 ```ruby
-# Match stdout and status, ignore stderr
 my_matcher = ->(recorded, actual) {
-  recorded["stdout"] == actual["stdout"] && recorded["status"] != actual["status"]
+  recorded["stdout"] == actual["stdout"] && recorded["status"] == actual["status"]
 }
 
-result = Backspin.run("my_test", matcher: { all: my_matcher }) do
-  Open3.capture3("echo hello")
-end
+result = Backspin.run(["echo", "hello"], name: "my_test", matcher: {all: my_matcher})
 ```
 
 Or you can override specific fields:
@@ -131,18 +127,7 @@ timestamp_matcher = ->(recorded, actual) {
   recorded.match?(/\d{4}-\d{2}-\d{2}/) && actual.match?(/\d{4}-\d{2}-\d{2}/)
 }
 
-result = Backspin.run("timestamp_test", matcher: { stdout: timestamp_matcher }) do
-  Open3.capture3("date")
-end
-
-# Match version numbers in stderr
-version_matcher = ->(recorded, actual) {
-  recorded[/v(\d+)\./, 1] == actual[/v(\d+)\./, 1]
-}
-
-result = Backspin.run("version_check", matcher: { stderr: version_matcher }) do
-  Open3.capture3("node --version")
-end
+result = Backspin.run(["date"], name: "timestamp_test", matcher: {stdout: timestamp_matcher})
 ```
 
 For more matcher examples and detailed documentation, see [MATCHERS.md](MATCHERS.md).
@@ -152,21 +137,18 @@ For more matcher examples and detailed documentation, see [MATCHERS.md](MATCHERS
 The API returns a `RecordResult` object with helpful methods:
 
 ```ruby
-result = Backspin.run("my_test") do
-  Open3.capture3("echo out; echo err >&2; exit 42")
-end
+result = Backspin.run(["sh", "-c", "echo out; echo err >&2; exit 42"], name: "my_test")
 
 # Check the mode
 result.recorded?  # true on first run
 result.verified?  # true/false on subsequent runs, nil when recording
-result.playback?  # true in playback mode
 
-# Access output (first command for single commands)
+# Access output (first command)
 result.stdout     # "out\n"
-result.stderr     # "err\n" 
+result.stderr     # "err\n"
 result.status     # 42
 result.success?   # false (non-zero exit)
-result.output     # The raw return value from the block
+result.output     # [stdout, stderr, status] for command runs
 
 # Debug information
 result.record_path  # Path to the YAML file
@@ -174,47 +156,12 @@ result.error_message  # Human-readable error if verification failed
 result.diff  # Diff between expected and actual output
 ```
 
-### Multiple Commands
-
-Backspin automatically records and verifies all commands executed in a block:
-
-```ruby
-result = Backspin.run("multi_command_test") do
-  # All of these commands will be recorded
-  version, = Open3.capture3("ruby --version")
-  files, = Open3.capture3("ls -la")
-  system("echo 'Processing...'")  # Note: system doesn't capture output
-  data, stderr, = Open3.capture3("curl https://api.example.com/data")
-  
-  # Return whatever you need
-  { version: version.strip, file_count: files.lines.count, data: data }
-end
-
-# Access individual command results
-result.commands.size       # 4
-result.multiple_commands?  # true
-
-# For multiple commands, use these accessors
-result.all_stdout  # Array of stdout from each command
-result.all_stderr  # Array of stderr from each command
-result.all_status  # Array of exit statuses
-
-# Or access specific commands
-result.commands[0].stdout  # Ruby version output
-result.commands[1].stdout  # ls output
-result.commands[2].status  # system call exit status (stdout is empty)
-result.commands[3].stderr  # curl errors if any
-```
-
-When verifying multiple commands, Backspin ensures all commands match in the exact order they were recorded. If any command differs, you'll get a detailed error showing which commands failed.
-
 ### Configuration
 
 You can configure Backspin's behavior globally:
 
 ```ruby
 Backspin.configure do |config|
-  # Both run and capture methods will raise on verification failure by default
   config.raise_on_verification_failure = false # default is true
   config.backspin_dir = "spec/fixtures/cli_records" # default is "fixtures/backspin"
   config.scrub_credentials = false # default is true
@@ -222,42 +169,31 @@ end
 ```
 
 The `raise_on_verification_failure` setting affects both `Backspin.run` and `Backspin.capture`:
-- When `true` (default): Both methods raise exceptions on verification failure
-  - `run` raises `RSpec::Expectations::ExpectationNotMetError`
-  - `capture` raises `Backspin::VerificationError` (framework-agnostic)
+- When `true` (default): Both methods raise `Backspin::VerificationError` on verification failure
 - When `false`: Both methods return a result with `verified?` set to false
 
 If you need to disable the raising behavior for a specific test, you can temporarily configure it:
 
 ```ruby
-# Temporarily disable raising for this block
 Backspin.configure do |config|
   config.raise_on_verification_failure = false
 end
 
-result = Backspin.run("my_test") do
-  Open3.capture3("echo different")
-end
+result = Backspin.run(["echo", "different"], name: "my_test")
 # result.verified? will be false but won't raise
 
-# Reset configuration
 Backspin.reset_configuration!
 ```
 
 ### Credential Scrubbing
 
-If the CLI interaction you are recording contains sensitive data in stdout or stderr, you should be careful to make sure it is not recorded to yaml!
+If the CLI interaction you are recording contains sensitive data in stdout/stderr, you should be careful to make sure it is not recorded to YAML.
 
-By default, Backspin automatically tries to scrub [common credential patterns](https://github.com/rsanheim/backspin/blob/f8661f084aad0ae759cd971c4af31ccf9bdc6bba/lib/backspin.rb#L46-L65) from records, but this will only handle some common cases.
-Always review your record files before commiting them to source control. 
-
-Use a tool like [trufflehog](https://github.com/trufflesecurity/trufflehog) or [gitleaks](https://github.com/gitleaks/gitleaks) run via a pre-commit to catch any sensitive data before commit. 
+By default, Backspin automatically tries to scrub common credential patterns from recorded stdout, stderr, args, and env values. Always review your record files before commiting them to source control.
 
 ```ruby
 # This will automatically scrub AWS keys, API tokens, passwords, etc.
-Backspin.run("aws_command") do
-  Open3.capture3("aws s3 ls")
-end
+Backspin.run(["aws", "s3", "ls"], name: "aws_command")
 
 # Add custom patterns to scrub
 Backspin.configure do |config|

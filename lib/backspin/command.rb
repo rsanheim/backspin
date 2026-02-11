@@ -4,11 +4,12 @@ require_relative "command_result"
 
 module Backspin
   class Command
-    attr_reader :args, :result, :recorded_at, :method_class
+    attr_reader :args, :env, :result, :recorded_at, :method_class
 
-    def initialize(method_class:, args:, stdout: nil, stderr: nil, status: nil, result: nil, recorded_at: nil)
+    def initialize(method_class:, args:, env: nil, stdout: nil, stderr: nil, status: nil, result: nil, recorded_at: nil)
       @method_class = method_class
       @args = args
+      @env = env
       @recorded_at = recorded_at
 
       # Accept either a CommandResult or individual stdout/stderr/status
@@ -38,6 +39,8 @@ module Backspin
         "recorded_at" => @recorded_at
       }
 
+      data["env"] = scrub_env(@env) if @env
+
       # Apply filter if provided
       data = filter.call(data) if filter
 
@@ -50,18 +53,16 @@ module Backspin
       method_class = case data["command_type"]
       when "Open3::Capture3"
         Open3::Capture3
-      when "Kernel::System"
-        ::Kernel::System
       when "Backspin::Capturer"
         Backspin::Capturer
       else
-        # Default to capture3 for backwards compatibility
-        Open3::Capture3
+        raise RecordFormatError, "Unknown command type: #{data["command_type"]}"
       end
 
       new(
         method_class: method_class,
         args: data["args"],
+        env: data["env"],
         stdout: data["stdout"],
         stderr: data["stderr"],
         status: data["status"],
@@ -74,18 +75,33 @@ module Backspin
     def scrub_args(args)
       return args unless Backspin.configuration.scrub_credentials && args
 
-      args.map do |arg|
-        case arg
-        when String
-          Backspin.scrub_text(arg)
-        when Array
-          scrub_args(arg)
-        when Hash
-          arg.transform_values { |v| v.is_a?(String) ? Backspin.scrub_text(v) : v }
-        else
-          arg
+      case args
+      when String
+        Backspin.scrub_text(args)
+      when Array
+        args.map do |arg|
+          case arg
+          when String
+            Backspin.scrub_text(arg)
+          when Array
+            scrub_args(arg)
+          when Hash
+            arg.transform_values { |v| v.is_a?(String) ? Backspin.scrub_text(v) : v }
+          else
+            arg
+          end
         end
+      when Hash
+        args.transform_values { |v| v.is_a?(String) ? Backspin.scrub_text(v) : v }
+      else
+        args
       end
+    end
+
+    def scrub_env(env)
+      return env unless Backspin.configuration.scrub_credentials && env
+
+      env.transform_values { |value| value.is_a?(String) ? Backspin.scrub_text(value) : value }
     end
   end
 end
@@ -93,11 +109,6 @@ end
 # Define the Open3::Capture3 class for identification
 module Open3
   class Capture3; end
-end
-
-# Define the Kernel::System class for identification
-module ::Kernel
-  class System; end
 end
 
 # Define the Backspin::Capturer class for identification

@@ -21,7 +21,7 @@ Backspin is a Ruby gem for characterization testing of command-line interfaces. 
 
 ### Prerequisites
 
-- Ruby 3.2, 3.3, or 3.4
+- Ruby 3.2, 3.3, 3.4, or 4.0
 - Bundler
 - Git
 
@@ -71,7 +71,7 @@ Backspin is a Ruby gem for characterization testing of command-line interfaces. 
 **Core Components:**
 
 - **Backspin Module** (`lib/backspin.rb`)
-  - Main API: `call`, `verify`, `verify!`, `use_record`
+  - Main API: `run` (direct command execution and block capture), `capture` (alias for block form)
   - Credential scrubbing logic
   - Configuration management
 
@@ -132,15 +132,8 @@ Example test structure:
 ```ruby
 RSpec.describe "Feature name" do
   it "does something specific" do
-    # Setup
-    record_name = "my_test_record"
-    
-    # Exercise
-    result = Backspin.call(record_name) do
-      Open3.capture3("echo", "hello")
-    end
-    
-    # Verify
+    result = Backspin.run(["echo", "hello"], name: "my_test_record")
+
     expect(result.stdout).to eq("hello\n")
   end
 end
@@ -162,7 +155,7 @@ end
 - Keep changes focused and atomic
 - Include tests for new functionality
 - Update examples in README.md if changing public APIs
-- Ensure CI passes (tests against Ruby 3.2, 3.3, and 3.4)
+- Ensure CI passes (tests against Ruby 3.2, 3.3, 3.4, and 4.0)
 
 ## Code Style
 
