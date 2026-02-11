@@ -219,4 +219,33 @@ RSpec.describe "Backspin matcher contract" do
 
     expect(matcher.match?).to be true
   end
+
+  it "materializes snapshot hashes once across match and failure reason" do
+    expected_hash = {
+      "stdout" => "one\n",
+      "stderr" => "",
+      "status" => 0
+    }
+    actual_hash = {
+      "stdout" => "two\n",
+      "stderr" => "",
+      "status" => 0
+    }
+
+    expected_snapshot = instance_double(Backspin::Snapshot)
+    actual_snapshot = instance_double(Backspin::Snapshot)
+
+    expect(expected_snapshot).to receive(:to_h).once.and_return(expected_hash)
+    expect(actual_snapshot).to receive(:to_h).once.and_return(actual_hash)
+
+    matcher = Backspin::Matcher.new(
+      config: nil,
+      expected: expected_snapshot,
+      actual: actual_snapshot
+    )
+
+    expect(matcher.match?).to be false
+    expect(matcher.failure_reason).to include("stdout differs")
+    expect(matcher.match?).to be false
+  end
 end

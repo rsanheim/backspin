@@ -5,18 +5,20 @@ module Backspin
   class Matcher
     attr_reader :config, :expected, :actual
 
-    def initialize(config:, expected:, actual:)
+    def initialize(config:, expected:, actual:, expected_hash: nil, actual_hash: nil)
       @config = normalize_config(config)
       @expected = expected
       @actual = actual
+      @expected_hash = expected_hash
+      @actual_hash = actual_hash
     end
 
     # @return [Boolean] true if snapshots match according to configured matcher
     def match?
       if config.nil?
-        default_matcher.call(expected.to_h, actual.to_h)
+        default_matcher.call(expected_hash, actual_hash)
       elsif config.is_a?(Proc)
-        config.call(expected.to_h, actual.to_h)
+        config.call(expected_hash, actual_hash)
       elsif config.is_a?(Hash)
         verify_with_hash_matcher
       else
@@ -29,16 +31,10 @@ module Backspin
       reasons = []
 
       if config.nil?
-        expected_hash = expected.to_h
-        actual_hash = actual.to_h
-
         reasons << "stdout differs" if expected_hash["stdout"] != actual_hash["stdout"]
         reasons << "stderr differs" if expected_hash["stderr"] != actual_hash["stderr"]
         reasons << "exit status differs" if expected_hash["status"] != actual_hash["status"]
       elsif config.is_a?(Hash)
-        expected_hash = expected.to_h
-        actual_hash = actual.to_h
-
         config.each do |field, matcher_proc|
           case field
           when :all
@@ -76,9 +72,6 @@ module Backspin
     end
 
     def verify_with_hash_matcher
-      expected_hash = expected.to_h
-      actual_hash = actual.to_h
-
       results = config.map do |field, matcher_proc|
         case field
         when :all
@@ -99,6 +92,14 @@ module Backspin
           recorded["stderr"] == actual["stderr"] &&
           recorded["status"] == actual["status"]
       end
+    end
+
+    def expected_hash
+      @expected_hash ||= expected.to_h
+    end
+
+    def actual_hash
+      @actual_hash ||= actual.to_h
     end
   end
 end

@@ -8,18 +8,24 @@ module Backspin
     def initialize(expected:, actual:, matcher: nil)
       @expected = expected
       @actual = actual
+      @expected_hash = expected.to_h
+      @actual_hash = actual.to_h
       @matcher = Matcher.new(
         config: matcher,
         expected: expected,
-        actual: actual
+        actual: actual,
+        expected_hash: @expected_hash,
+        actual_hash: @actual_hash
       )
+      @verified = nil
     end
 
     # @return [Boolean] true if the snapshot output matches.
     def verified?
-      return false unless command_types_match?
+      return @verified unless @verified.nil?
+      return @verified = false unless command_types_match?
 
-      @matcher.match?
+      @verified = @matcher.match?
     end
 
     # @return [String, nil] Human-readable diff if not verified
@@ -27,8 +33,6 @@ module Backspin
       return nil if verified?
 
       parts = []
-      expected_hash = expected.to_h
-      actual_hash = actual.to_h
 
       unless command_types_match?
         parts << "Command type mismatch: expected #{expected.command_type.name}, got #{actual.command_type.name}"
@@ -98,6 +102,14 @@ module Backspin
       end
 
       diff_lines.join("\n")
+    end
+
+    def expected_hash
+      @expected_hash
+    end
+
+    def actual_hash
+      @actual_hash
     end
   end
 end

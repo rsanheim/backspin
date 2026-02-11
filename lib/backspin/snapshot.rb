@@ -24,19 +24,9 @@ module Backspin
     end
 
     def to_h(filter: nil)
-      data = {
-        "command_type" => command_type.name,
-        "args" => scrub_args(args),
-        "stdout" => Backspin.scrub_text(stdout),
-        "stderr" => Backspin.scrub_text(stderr),
-        "status" => status,
-        "recorded_at" => recorded_at
-      }
+      return base_hash if filter.nil?
 
-      data["env"] = scrub_env(env) if env
-      data = filter.call(data) if filter
-
-      data
+      filter.call(deep_dup(base_hash))
     end
 
     def self.from_h(data)
@@ -62,6 +52,21 @@ module Backspin
 
     private
 
+    def base_hash
+      @base_hash ||= begin
+        data = {
+          "command_type" => command_type.name,
+          "args" => scrub_args(args),
+          "stdout" => Backspin.scrub_text(stdout),
+          "stderr" => Backspin.scrub_text(stderr),
+          "status" => status,
+          "recorded_at" => recorded_at
+        }
+        data["env"] = scrub_env(env) if env
+        deep_freeze(data)
+      end
+    end
+
     def scrub_args(value)
       return value unless Backspin.configuration.scrub_credentials && value
 
@@ -81,6 +86,29 @@ module Backspin
       return value unless Backspin.configuration.scrub_credentials && value
 
       value.transform_values { |entry| entry.is_a?(String) ? Backspin.scrub_text(entry) : entry }
+    end
+
+    def deep_freeze(value)
+      case value
+      when Hash
+        value.each_value { |v| deep_freeze(v) }
+      when Array
+        value.each { |v| deep_freeze(v) }
+      end
+      value.freeze
+    end
+
+    def deep_dup(value)
+      case value
+      when Hash
+        value.transform_values { |v| deep_dup(v) }
+      when Array
+        value.map { |v| deep_dup(v) }
+      when String
+        value.dup
+      else
+        value
+      end
     end
   end
 end
