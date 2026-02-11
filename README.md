@@ -9,7 +9,7 @@ Backspin records and replays CLI interactions in Ruby for easy snapshot testing 
 
 **NOTE:** Backspin should be considered alpha while pre version 1.0. It is in heavy development along-side some real-world CLI apps, so expect things to change and mature.
 
-Inspired by [VCR](https://github.com/vcr/vcr) and other [golden master](https://en.wikipedia.org/wiki/Golden_master_(software_development)) testing libraries.
+Inspired by [VCR](https://github.com/vcr/vcr) and other [characterization (aka golden master)](https://en.wikipedia.org/wiki/Characterization_test) testing libraries.
 
 ## Overview
 
