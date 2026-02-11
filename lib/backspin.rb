@@ -246,12 +246,12 @@ module Backspin
 
       env_mode = mode_from_env
       if env_mode && env_mode != :auto
-        configuration.logger.debug { "event=mode_resolved mode=#{env_mode} source=env record=#{record_path}" }
+        configuration.logger&.debug { "event=mode_resolved mode=#{env_mode} source=env record=#{record_path}" }
         return env_mode
       end
 
       resolved = File.exist?(record_path) ? :verify : :record
-      configuration.logger.debug { "event=mode_resolved mode=#{resolved} source=auto record=#{record_path}" }
+      configuration.logger&.debug { "event=mode_resolved mode=#{resolved} source=auto record=#{record_path}" }
       resolved
     end
 

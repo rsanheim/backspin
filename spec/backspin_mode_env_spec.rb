@@ -139,6 +139,29 @@ RSpec.describe "BACKSPIN_MODE environment variable" do
       }.to raise_error(Backspin::RecordNotFoundError)
     end
 
+    it "works when logger is nil in auto mode" do
+      Backspin.configure do |config|
+        config.logger = nil
+      end
+
+      result = Backspin.run(["echo", "no logger"], name: "nil_logger_auto")
+
+      expect(result).to be_recorded
+    end
+
+    it "works when logger is nil and mode resolves from env" do
+      Backspin.run(["echo", "seed"], name: "nil_logger_env", mode: :record)
+
+      Backspin.configure do |config|
+        config.logger = nil
+      end
+      ENV["BACKSPIN_MODE"] = "verify"
+
+      result = Backspin.run(["echo", "seed"], name: "nil_logger_env")
+
+      expect(result).to be_verified
+    end
+
     it "accepts case-insensitive values" do
       %w[RECORD Record record].each do |value|
         ENV["BACKSPIN_MODE"] = value

@@ -4,7 +4,7 @@
 
 * Added `BACKSPIN_MODE` environment variable to globally override recording mode (`auto`, `record`, `verify`).
 * Explicit `mode:` kwarg still takes highest precedence, followed by the env var, then auto-detection.
-* Added configurable logger to `Backspin::Configuration` (defaults to WARN level, logfmt-lite format).
+* Added configurable logger to `Backspin::Configuration` (defaults to DEBUG level, logfmt-lite format, and can be disabled with `config.logger = nil`).
 * Added `logger` gem as a runtime dependency (required for Ruby 4.0+).
 
 ## 0.11.0 - 2026-02-11

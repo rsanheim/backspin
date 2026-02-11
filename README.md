@@ -265,17 +265,17 @@ Backspin.reset_configuration!
 
 ### Logging
 
-Backspin includes a configurable logger for diagnostics. By default it logs at `WARN` level to stdout using a logfmt-lite format:
+Backspin includes a configurable logger for diagnostics. By default it logs at `DEBUG` level to stdout using a logfmt-lite format:
 
 ```
 level=debug lib=backspin event=mode_resolved mode=record source=env record=fixtures/backspin/my_test.yml
 ```
 
-To enable debug logging:
+To reduce log output:
 
 ```ruby
 Backspin.configure do |config|
-  config.logger.level = Logger::DEBUG
+  config.logger.level = Logger::WARN
 end
 ```
 
@@ -284,6 +284,14 @@ To replace the logger entirely:
 ```ruby
 Backspin.configure do |config|
   config.logger = Logger.new("log/backspin.log")
+end
+```
+
+To disable Backspin logging entirely (for example in tests):
+
+```ruby
+Backspin.configure do |config|
+  config.logger = nil
 end
 ```
 
