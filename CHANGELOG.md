@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0 - 2026-02-11
+* Breaking: `Backspin.run` and `Backspin.capture` now return `Backspin::BackspinResult` with explicit `result.actual` / `result.expected` snapshots.
+* Breaking: result convenience accessors (`result.stdout`, `result.stderr`, `result.status`) were removed in favor of snapshot access.
+* Breaking: record format bumped to 4.0 and now persists a single `snapshot` object (v3 records are rejected).
+* Simplification: removed legacy `Command`, `CommandResult`, and `RecordResult` layers; matcher/diff now operate directly on snapshots.
+* Added focused coverage for the new result contract and capture stream restoration behavior.
+* Updated project docs to reflect the BackspinResult + Snapshot API surface.
+
 ## 0.8.0 - 2026-02-05
 * Breaking: new `Backspin.run("command", name:, env:)` command API plus block capture via `Backspin.run(name:) { ... }` and `Backspin.capture("name") { ... }`
 * Breaking: remove `run!` and `:playback`
