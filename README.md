@@ -271,14 +271,6 @@ Backspin includes a configurable logger for diagnostics. By default it logs at `
 level=debug lib=backspin event=mode_resolved mode=record source=env record=fixtures/backspin/my_test.yml
 ```
 
-To reduce log output:
-
-```ruby
-Backspin.configure do |config|
-  config.logger.level = Logger::WARN
-end
-```
-
 To replace the logger entirely:
 
 ```ruby
