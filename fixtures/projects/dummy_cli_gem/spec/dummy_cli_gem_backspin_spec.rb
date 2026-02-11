@@ -4,21 +4,9 @@ require "spec_helper"
 
 RSpec.describe "DummyCliGem Backspin full-stack fixture" do
   let(:project_root) { Pathname(__dir__).join("..").expand_path }
-  let(:record_dir) { project_root.join("spec", "fixtures", "backspin") }
-
-  before do
-    Backspin.configure do |config|
-      config.backspin_dir = record_dir
-      config.logger = nil
-    end
-  end
-
-  after do
-    Backspin.reset_configuration!
-  end
 
   it "verifies echo command output from committed YAML" do
-    expect(record_dir.join("dummy_echo.yml")).to exist
+    expect(BACKSPIN_DIR.join("dummy_echo.yml")).to exist
 
     result = Backspin.run(
       ["ruby", "exe/dummy_cli_gem", "echo", "hello from dummy gem"],
@@ -32,7 +20,7 @@ RSpec.describe "DummyCliGem Backspin full-stack fixture" do
   end
 
   it "verifies list command output from committed YAML" do
-    expect(record_dir.join("dummy_ls.yml")).to exist
+    expect(BACKSPIN_DIR.join("dummy_ls.yml")).to exist
 
     result = Backspin.run(
       ["ruby", "exe/dummy_cli_gem", "list", "spec/fixtures/listing_target"],
@@ -47,7 +35,7 @@ RSpec.describe "DummyCliGem Backspin full-stack fixture" do
 
   it "uses current Backspin record format for fixture YAML files" do
     %w[dummy_echo dummy_ls].each do |record_name|
-      record_path = record_dir.join("#{record_name}.yml")
+      record_path = BACKSPIN_DIR.join("#{record_name}.yml")
       expect(record_path).to exist
 
       record_data = YAML.load_file(record_path)
