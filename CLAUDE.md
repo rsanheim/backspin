@@ -41,13 +41,11 @@ bin/rake standard                # Alternative: Run via Rake task
 ### Core Components
 
 **Backspin Module** (`lib/backspin.rb`)
-- Main API: `run`, `run!` (both raise on verification failure by default)
-- Capture API: `capture` (raises `VerificationError` on verification failure by default)
-- Legacy API: `call`, `verify`, `verify!`, `use_record`
+- Main API: `run` (direct command execution and block capture), `capture` (alias for block form)
 - Credential scrubbing logic
-- Configuration management (including `raise_on_verification_failure` which defaults to `true` and affects both `run` and `capture`)
+- Configuration management (including `raise_on_verification_failure` which defaults to `true`)
 
-**Command Class** (`lib/backspin.rb`)
+**Command Class** (`lib/backspin/command.rb`)
 - Represents a single CLI execution
 - Stores: args, stdout, stderr, status, recorded_at
 
@@ -60,10 +58,11 @@ bin/rake standard                # Alternative: Run via Rake task
 
 ### Key Design Patterns
 
-- Uses RSpec mocking to intercept `Open3.capture3` calls
-- Records are stored as YAML arrays to support multiple commands
-- Automatic credential scrubbing for security (AWS keys, API tokens, passwords)
-- VCR-style recording modes: `:once`, `:all`, `:none`, `:new_episodes`
+- Direct `Open3.capture3` execution for command runs
+- Tempfile-based FD capture for block forms
+- Single-command records stored as YAML
+- Automatic credential scrubbing for security (AWS keys, API tokens, passwords, env values)
+- Recording modes: `:auto`, `:record`, `:verify`
 
 ### Testing Approach
 
