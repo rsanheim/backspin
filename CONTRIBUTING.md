@@ -17,7 +17,7 @@ Note that Backspin is in early development and the API _will_ change before stab
 
 ## Getting Started
 
-Backspin is a Ruby gem for characterization testing of command-line interfaces. It records and replays CLI interactions by capturing stdout, stderr, and exit status from shell commands - similar to how VCR works for HTTP interactions.
+Backspin is a Ruby gem for characterization testing of command-line interfaces. It records and verifies CLI interactions by capturing stdout, stderr, and exit status from shell commands, similar to how VCR works for HTTP interactions.
 
 ### Prerequisites
 
@@ -75,13 +75,17 @@ Backspin is a Ruby gem for characterization testing of command-line interfaces. 
   - Credential scrubbing logic
   - Configuration management
 
-- **Command Class** (`lib/backspin/command.rb`)
-  - Represents a single CLI execution
-  - Stores: args, stdout, stderr, status, recorded_at, etc
+- **Snapshot Class** (`lib/backspin/snapshot.rb`)
+  - Represents a single execution snapshot
+  - Stores: command type, args, env, stdout, stderr, status, recorded_at
+
+- **BackspinResult Class** (`lib/backspin/backspin_result.rb`)
+  - Return object from `Backspin.run` / `Backspin.capture`
+  - Exposes `actual` and `expected` snapshots plus verify details
 
 - **Record Class** (`lib/backspin/record.rb`)
   - Manages YAML record files
-  - Handles recording/playback sequencing
+  - Handles record/verify sequencing
 
 ### Common Development Tasks
 
@@ -134,7 +138,7 @@ RSpec.describe "Feature name" do
   it "does something specific" do
     result = Backspin.run(["echo", "hello"], name: "my_test_record")
 
-    expect(result.stdout).to eq("hello\n")
+    expect(result.actual.stdout).to eq("hello\n")
   end
 end
 ```

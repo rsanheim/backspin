@@ -168,22 +168,13 @@ snapshot:
   status: 0
 ```
 
-## Proposed Migration Inside Codebase
+## Implemented Simplifications
 
-- Replace result-facing use of `RecordResult` with `BackspinResult`.
-- Introduce `Snapshot` object for `actual` and `expected`.
-- Remove result methods that imply multi-command (`all_*`, `multiple_commands?`, `commands`).
-- Keep `CommandDiff`, but compare snapshots directly.
-- Remove `CommandResult` as a standalone layer; snapshot holds output fields directly.
-
-## Suggested Implementation Order
-
-1. Add `Snapshot` and `BackspinResult` classes.
-2. Update `Backspin.run` and `Backspin.capture` to return `BackspinResult`.
-3. Replace current `RecordResult` usage in verify/record paths.
-4. Update specs to assert `result.actual` / `result.expected` contract.
-5. Simplify persisted record shape to v4 single-snapshot format.
-6. Remove obsolete result API methods and now-unused classes.
+- Unified all run/capture return values under `BackspinResult`.
+- Introduced `Snapshot` as the shared value object for `actual` and `expected`.
+- Removed multi-command result semantics from the public return API.
+- Kept `CommandDiff`, now operating directly on snapshots.
+- Simplified persistence to one snapshot per record file.
 
 ## Current Status
 
@@ -193,17 +184,17 @@ Status date: 2026-02-11
 2. `Backspin.run` and `Backspin.capture` now return `BackspinResult`.
 3. `Record` persistence moved to v4 single-snapshot format (`snapshot` key, no `commands` array).
 4. `Matcher` and `CommandDiff` now operate on expected/actual snapshots.
-5. Legacy result/command layers were removed from `lib/`: `RecordResult`, `Command`, and `CommandResult`.
+5. Legacy result/command layering was removed from `lib/`.
 6. Specs have been migrated to the new result contract and v4 format.
 7. Validation is green: `66 examples, 0 failures` and Standard lint passes.
-8. Remaining before merge: update public docs (`README.md`, `MATCHERS.md`) to the new `result.actual` / `result.expected` API terminology.
+8. Public docs now use `result.actual` / `result.expected` terminology.
 
 ## Success Criteria
 
 1. `Backspin.run` and `Backspin.capture` always return `BackspinResult` with `actual` populated.
 2. In `:record` mode, `result.expected` is `nil` and `result.verified?` is `nil`.
 3. In `:verify` mode, `result.expected` is present, `result.verified?` is boolean, and mismatch cases populate `result.diff` plus `result.error_message`.
-4. No multi-command result API remains (`commands`, `all_*`, `multiple_commands?` removed from public result contract).
+4. No multi-command result API remains in the public result contract.
 5. Snapshot object exposes a stable single-command shape: `stdout`, `stderr`, `status`, `args`, `env`, `command_type`.
 6. Record format uses one snapshot (v4), not a commands array.
 7. Existing strict verification behavior remains: default raises `Backspin::VerificationError`, while `raise_on_verification_failure = false` returns a failed result without raising.
