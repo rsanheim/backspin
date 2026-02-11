@@ -31,7 +31,9 @@ RSpec.describe "Backspin.capture" do
     expect(record_path).to exist
 
     yaml_content = YAML.load_file(record_path)
-    expect(yaml_content["format_version"]).to eq("4.0")
+    expect(yaml_content["format_version"]).to eq("4.1")
+    expect(yaml_content["first_recorded_at"]).to eq(yaml_content["recorded_at"])
+    expect(yaml_content["record_count"]).to eq(1)
 
     snapshot = yaml_content["snapshot"]
     expect(snapshot["command_type"]).to eq("Backspin::Capturer")

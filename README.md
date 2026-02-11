@@ -111,6 +111,28 @@ Precedence (highest to lowest):
 
 Allowed values: `auto`, `record`, `verify` (case-insensitive). Invalid values raise `ArgumentError`.
 
+### Record Metadata
+
+Backspin writes records using `format_version: "4.1"` with top-level metadata:
+
+```yaml
+---
+format_version: "4.1"
+first_recorded_at: "2026-01-01T10:00:00Z" # immutable
+recorded_at: "2026-02-01T10:00:00Z"       # updates on each write
+record_count: 3                            # increments on each write
+snapshot:
+  command_type: "Open3::Capture3"
+  args: ["echo", "hello"]
+  stdout: "hello\n"
+  stderr: ""
+  status: 0
+  recorded_at: "2026-02-01T10:00:00Z"
+```
+
+When re-recording with `mode: :record`, Backspin preserves `first_recorded_at`, updates `recorded_at`, and increments `record_count`.
+Existing `4.0` records still load and are upgraded to `4.1` metadata on the next write.
+
 ### Environment Variables
 
 ```ruby

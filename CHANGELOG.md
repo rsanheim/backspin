@@ -7,6 +7,14 @@
 * Added configurable logger to `Backspin::Configuration` (defaults to WARN level, logfmt-lite format).
 * Added `logger` gem as a runtime dependency (required for Ruby 4.0+).
 
+## 0.11.0 - 2026-02-11
+* Added immutable top-level `first_recorded_at` metadata for record files.
+* Added mutable top-level `recorded_at` metadata that updates on each successful re-record.
+* Added top-level `record_count`, incremented on each successful record write.
+* Record format now writes `format_version: 4.1`; loading remains backward-compatible with 4.0 record files.
+* Added acceptance coverage for v4.1 schema and 4.0-to-4.1 upgrade behavior.
+* Removed legacy committed `.yml` record fixtures from old schema versions.
+
 ## 0.10.0 - 2026-02-11
 * Added `filter_on` to `Backspin.run` and `Backspin.capture` (`:both` default, `:record` opt-out).
 * Changed default filter behavior: `filter` now applies during verify comparisons/diffs when `filter_on: :both`.
