@@ -20,7 +20,9 @@ RSpec.describe "Backspin.run" do
     record_path = Backspin.configuration.backspin_dir.join("command_with_env.yml")
     record_data = YAML.load_file(record_path)
 
-    expect(record_data["format_version"]).to eq("4.0")
+    expect(record_data["format_version"]).to eq("4.1")
+    expect(record_data["first_recorded_at"]).to eq(record_data["recorded_at"])
+    expect(record_data["record_count"]).to eq(1)
     snapshot = record_data["snapshot"]
     expect(snapshot["command_type"]).to eq("Open3::Capture3")
     expect(snapshot["args"]).to eq(["ruby", "-e", "print ENV.fetch('MY_ENV_VAR')"])
@@ -93,12 +95,25 @@ RSpec.describe "Backspin.run" do
   end
 
   it "overwrites existing records when mode is :record" do
-    Backspin.run(["echo", "first"], name: "record_overwrite", mode: :record)
-    Backspin.run(["echo", "second"], name: "record_overwrite", mode: :record)
+    first_time = Time.utc(2026, 1, 1, 10, 0, 0)
+    second_time = Time.utc(2026, 2, 1, 10, 0, 0)
+
+    Timecop.freeze(first_time) do
+      Backspin.run(["echo", "first"], name: "record_overwrite", mode: :record)
+    end
+
+    Timecop.freeze(second_time) do
+      Backspin.run(["echo", "second"], name: "record_overwrite", mode: :record)
+    end
 
     record_path = Backspin.configuration.backspin_dir.join("record_overwrite.yml")
-    snapshot = YAML.load_file(record_path)["snapshot"]
+    record_data = YAML.load_file(record_path)
+    snapshot = record_data["snapshot"]
+
     expect(snapshot["stdout"]).to eq("second\n")
+    expect(record_data["first_recorded_at"]).to eq(first_time.iso8601)
+    expect(record_data["recorded_at"]).to eq(second_time.iso8601)
+    expect(record_data["record_count"]).to eq(2)
   end
 
   it "verifies matching output and raises on mismatch by default" do

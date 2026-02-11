@@ -120,11 +120,7 @@ module Backspin
       mode = determine_mode(mode, record_path)
       validate_mode!(mode)
 
-      record = if mode == :record
-        Record.create(record_name)
-      else
-        Record.load_or_create(record_path)
-      end
+      record = Record.load_or_create(record_path)
 
       recorder = Recorder.new(record: record, mode: mode, matcher: matcher, filter: filter, filter_on: filter_on)
 
@@ -147,11 +143,7 @@ module Backspin
       mode = determine_mode(mode, record_path)
       validate_mode!(mode)
 
-      record = if mode == :record
-        Record.create(name)
-      else
-        Record.load_or_create(record_path)
-      end
+      record = Record.load_or_create(record_path)
 
       normalized_env = env.nil? ? nil : normalize_env(env)
 
