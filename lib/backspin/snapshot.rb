@@ -7,12 +7,13 @@ module Backspin
 
     def initialize(command_type:, args:, env: nil, stdout: "", stderr: "", status: 0, recorded_at: nil)
       @command_type = command_type
-      @args = args
-      @env = env
-      @stdout = stdout || ""
-      @stderr = stderr || ""
+      @args = sanitize_args(args)
+      @env = env.nil? ? nil : sanitize_env(env)
+      @stdout = Backspin.scrub_text((stdout || "").dup).freeze
+      @stderr = Backspin.scrub_text((stderr || "").dup).freeze
       @status = status || 0
-      @recorded_at = recorded_at
+      @recorded_at = recorded_at.nil? ? nil : recorded_at.dup.freeze
+      @serialized_hash = build_serialized_hash
     end
 
     def success?
@@ -23,20 +24,8 @@ module Backspin
       !success?
     end
 
-    def to_h(filter: nil)
-      data = {
-        "command_type" => command_type.name,
-        "args" => scrub_args(args),
-        "stdout" => Backspin.scrub_text(stdout),
-        "stderr" => Backspin.scrub_text(stderr),
-        "status" => status,
-        "recorded_at" => recorded_at
-      }
-
-      data["env"] = scrub_env(env) if env
-      data = filter.call(data) if filter
-
-      data
+    def to_h
+      @serialized_hash
     end
 
     def self.from_h(data)
@@ -62,6 +51,19 @@ module Backspin
 
     private
 
+    def build_serialized_hash
+      data = {
+        "command_type" => command_type.name,
+        "args" => args,
+        "stdout" => stdout,
+        "stderr" => stderr,
+        "status" => status,
+        "recorded_at" => recorded_at
+      }
+      data["env"] = env if env
+      deep_freeze(data)
+    end
+
     def scrub_args(value)
       return value unless Backspin.configuration.scrub_credentials && value
 
@@ -81,6 +83,37 @@ module Backspin
       return value unless Backspin.configuration.scrub_credentials && value
 
       value.transform_values { |entry| entry.is_a?(String) ? Backspin.scrub_text(entry) : entry }
+    end
+
+    def sanitize_args(value)
+      deep_freeze(scrub_args(deep_dup(value)))
+    end
+
+    def sanitize_env(value)
+      deep_freeze(scrub_env(deep_dup(value)))
+    end
+
+    def deep_freeze(value)
+      case value
+      when Hash
+        value.each_value { |v| deep_freeze(v) }
+      when Array
+        value.each { |v| deep_freeze(v) }
+      end
+      value.freeze
+    end
+
+    def deep_dup(value)
+      case value
+      when Hash
+        value.transform_values { |entry| deep_dup(entry) }
+      when Array
+        value.map { |entry| deep_dup(entry) }
+      when String
+        value.dup
+      else
+        value
+      end
     end
   end
 end

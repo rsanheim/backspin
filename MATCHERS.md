@@ -77,6 +77,24 @@ The `:all` matcher receives full hashes with these keys:
 - `"env"` - Optional Hash of env vars (command runs only)
 - `"recorded_at"` - Timestamp string
 
+Matcher inputs are copies of comparison data so in-place mutation inside matcher callbacks
+does not mutate Backspin's stored snapshots.
+
+Matcher callbacks should return a boolean. Any truthy return value is treated as pass,
+and false/nil is treated as failure.
+
+Example with safe in-place mutation:
+
+```ruby
+matcher = {
+  all: ->(recorded, actual) {
+    recorded["stdout"].gsub!(/id=\d+/, "id=[ID]")
+    actual["stdout"].gsub!(/id=\d+/, "id=[ID]")
+    recorded["stdout"] == actual["stdout"]
+  }
+}
+```
+
 ## Examples
 
 ### Matching Version Numbers

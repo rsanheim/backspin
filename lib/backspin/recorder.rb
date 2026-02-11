@@ -6,13 +6,14 @@ require "backspin/command_diff"
 module Backspin
   # Handles capture-mode recording and verification
   class Recorder
-    attr_reader :mode, :record, :matcher, :filter
+    attr_reader :mode, :record, :matcher, :filter, :filter_on
 
-    def initialize(mode: :record, record: nil, matcher: nil, filter: nil)
+    def initialize(mode: :record, record: nil, matcher: nil, filter: nil, filter_on: :both)
       @mode = mode
       @record = record
       @matcher = matcher
       @filter = filter
+      @filter_on = filter_on
     end
 
     # Performs capture recording by intercepting all stdout/stderr output
@@ -62,7 +63,9 @@ module Backspin
       command_diff = CommandDiff.new(
         expected: expected_snapshot,
         actual: actual_snapshot,
-        matcher: @matcher
+        matcher: @matcher,
+        filter: @filter,
+        filter_on: @filter_on
       )
 
       BackspinResult.new(

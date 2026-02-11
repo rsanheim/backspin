@@ -243,4 +243,10 @@ RSpec.describe "Backspin.run" do
       Backspin.run(["echo", "hi"], name: "no_playback", mode: :playback)
     end.to raise_error(ArgumentError, /Playback mode is not supported/)
   end
+
+  it "rejects unknown filter_on values" do
+    expect do
+      Backspin.run(["echo", "hi"], name: "bad_filter_on", filter_on: :verify)
+    end.to raise_error(ArgumentError, /Unknown filter_on/)
+  end
 end
