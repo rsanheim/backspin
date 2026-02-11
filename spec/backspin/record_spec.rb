@@ -18,14 +18,16 @@ RSpec.describe Backspin::Record do
 
     expect do
       described_class.load_from_file(record_path)
-    end.to raise_error(Backspin::RecordFormatError, /expected format version 4.0/)
+    end.to raise_error(Backspin::RecordFormatError, /expected format version 4.1/)
   end
 
-  it "loads records with Open3::Capture3 snapshots" do
+  it "loads 4.1 records with Open3::Capture3 snapshots" do
     FileUtils.mkdir_p(File.dirname(record_path))
     File.write(record_path, {
-      "format_version" => "4.0",
+      "format_version" => "4.1",
+      "first_recorded_at" => "2024-01-01T00:00:00Z",
       "recorded_at" => "2024-01-01T00:00:00Z",
+      "record_count" => 1,
       "snapshot" => {
         "command_type" => "Open3::Capture3",
         "args" => ["echo", "hello"],
@@ -40,9 +42,12 @@ RSpec.describe Backspin::Record do
 
     expect(record.snapshot.args).to eq(["echo", "hello"])
     expect(record.snapshot.stdout).to eq("hello\n")
+    expect(record.first_recorded_at).to eq("2024-01-01T00:00:00Z")
+    expect(record.recorded_at).to eq("2024-01-01T00:00:00Z")
+    expect(record.record_count).to eq(1)
   end
 
-  it "includes env data when present" do
+  it "loads 4.0 records and backfills top-level metadata" do
     FileUtils.mkdir_p(File.dirname(record_path))
     File.write(record_path, {
       "format_version" => "4.0",
@@ -61,6 +66,9 @@ RSpec.describe Backspin::Record do
     record = described_class.load_from_file(record_path)
 
     expect(record.snapshot.env).to eq({"FOO" => "bar"})
+    expect(record.first_recorded_at).to eq("2024-01-01T00:00:00Z")
+    expect(record.recorded_at).to eq("2024-01-01T00:00:00Z")
+    expect(record.record_count).to eq(1)
   end
 
   it "raises on invalid YAML" do
@@ -75,8 +83,10 @@ RSpec.describe Backspin::Record do
   it "rejects unknown command types" do
     FileUtils.mkdir_p(File.dirname(record_path))
     File.write(record_path, {
-      "format_version" => "4.0",
+      "format_version" => "4.1",
+      "first_recorded_at" => "2024-01-01T00:00:00Z",
       "recorded_at" => "2024-01-01T00:00:00Z",
+      "record_count" => 1,
       "snapshot" => {
         "command_type" => "Kernel::System",
         "args" => ["echo", "hello"],
@@ -95,12 +105,57 @@ RSpec.describe Backspin::Record do
   it "raises when snapshot is missing" do
     FileUtils.mkdir_p(File.dirname(record_path))
     File.write(record_path, {
-      "format_version" => "4.0",
-      "recorded_at" => "2024-01-01T00:00:00Z"
+      "format_version" => "4.1",
+      "first_recorded_at" => "2024-01-01T00:00:00Z",
+      "recorded_at" => "2024-01-01T00:00:00Z",
+      "record_count" => 1
     }.to_yaml)
 
     expect do
       described_class.load_from_file(record_path)
     end.to raise_error(Backspin::RecordFormatError, /missing snapshot/i)
+  end
+
+  it "requires first_recorded_at for 4.1 records" do
+    FileUtils.mkdir_p(File.dirname(record_path))
+    File.write(record_path, {
+      "format_version" => "4.1",
+      "recorded_at" => "2024-01-01T00:00:00Z",
+      "record_count" => 1,
+      "snapshot" => {
+        "command_type" => "Open3::Capture3",
+        "args" => ["echo", "hello"],
+        "stdout" => "hello\n",
+        "stderr" => "",
+        "status" => 0,
+        "recorded_at" => "2024-01-01T00:00:00Z"
+      }
+    }.to_yaml)
+
+    expect do
+      described_class.load_from_file(record_path)
+    end.to raise_error(Backspin::RecordFormatError, /missing first_recorded_at/i)
+  end
+
+  it "requires record_count to be a positive integer for 4.1 records" do
+    FileUtils.mkdir_p(File.dirname(record_path))
+    File.write(record_path, {
+      "format_version" => "4.1",
+      "first_recorded_at" => "2024-01-01T00:00:00Z",
+      "recorded_at" => "2024-01-01T00:00:00Z",
+      "record_count" => 0,
+      "snapshot" => {
+        "command_type" => "Open3::Capture3",
+        "args" => ["echo", "hello"],
+        "stdout" => "hello\n",
+        "stderr" => "",
+        "status" => 0,
+        "recorded_at" => "2024-01-01T00:00:00Z"
+      }
+    }.to_yaml)
+
+    expect do
+      described_class.load_from_file(record_path)
+    end.to raise_error(Backspin::RecordFormatError, /record_count must be a positive integer/i)
   end
 end

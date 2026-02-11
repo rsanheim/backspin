@@ -141,14 +141,16 @@ result.expected.stdout
 - Error message is generated from `BackspinResult#error_message`.
 - Do not duplicate `diff` content in exception formatting.
 
-## Record Format Sketch (v4)
+## Record Format Sketch (v4.1)
 
 Single-snapshot format to match single-snapshot runtime model:
 
 ```yaml
 ---
-format_version: "4.0"
+format_version: "4.1"
+first_recorded_at: "2026-01-01T00:00:00Z"
 recorded_at: "2026-02-11T00:00:00Z"
+record_count: 3
 snapshot:
   command_type: "Open3::Capture3"
   args: ["echo", "hello"]
@@ -184,11 +186,11 @@ Status date: 2026-02-11
 
 1. `Snapshot` and `BackspinResult` classes are implemented and wired into runtime paths.
 2. `Backspin.run` and `Backspin.capture` now return `BackspinResult`.
-3. `Record` persistence moved to v4 single-snapshot format (`snapshot` key, no `commands` array).
+3. `Record` persistence moved to v4 single-snapshot format (`snapshot` key, no `commands` array), with v4.1 top-level metadata.
 4. `Matcher` and `CommandDiff` now operate on expected/actual snapshots.
 5. Legacy result/command layering was removed from `lib/`.
-6. Specs have been migrated to the new result contract and v4 format.
-7. Validation is green: `66 examples, 0 failures` and Standard lint passes.
+6. Specs have been migrated to the new result contract and v4.1 format.
+7. Validation is green: `89 examples, 0 failures` and Standard lint passes.
 8. Public docs now use `result.actual` / `result.expected` terminology.
 
 ## Success Criteria
@@ -198,7 +200,7 @@ Status date: 2026-02-11
 3. In `:verify` mode, `result.expected` is present, `result.verified?` is boolean, and mismatch cases populate `result.diff` plus `result.error_message`.
 4. No multi-command result API remains in the public result contract.
 5. Snapshot object exposes a stable single-command shape: `stdout`, `stderr`, `status`, `args`, `env`, `command_type`.
-6. Record format uses one snapshot (v4), not a commands array.
+6. Record format uses one snapshot (v4.x), not a commands array.
 7. Existing strict verification behavior remains: default raises `Backspin::VerificationError`, while `raise_on_verification_failure = false` returns a failed result without raising.
 8. End-to-end Unix command examples are covered in specs: `echo` record/verify, `ls -1` record/verify, `date` mismatch behavior (or matcher override), and captured `grep | wc` pipeline output via `Backspin.capture`.
 9. Matcher behavior is preserved: default matching remains stdout/stderr/status, and custom `matcher:` contract (Proc, hash fields, `:all`) continues to work for both run and capture verification.
