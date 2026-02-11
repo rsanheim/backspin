@@ -40,16 +40,14 @@ module Backspin
     end
 
     def evaluation
-      @evaluation ||= begin
-        if config.nil?
-          evaluate_default
-        elsif config.is_a?(Proc)
-          evaluate_proc
-        elsif config.is_a?(Hash)
-          evaluate_hash
-        else
-          raise ArgumentError, "Invalid matcher type: #{config.class}"
-        end
+      @evaluation ||= if config.nil?
+        evaluate_default
+      elsif config.is_a?(Proc)
+        evaluate_proc
+      elsif config.is_a?(Hash)
+        evaluate_hash
+      else
+        raise ArgumentError, "Invalid matcher type: #{config.class}"
       end
     end
 

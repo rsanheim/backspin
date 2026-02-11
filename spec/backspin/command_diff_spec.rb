@@ -80,5 +80,4 @@ RSpec.describe Backspin::CommandDiff do
     expect(command_diff.diff).to include("[stderr]")
     expect(command_diff.diff).to include("Exit status: expected 0, got 1")
   end
-
 end

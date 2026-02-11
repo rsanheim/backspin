@@ -346,5 +346,4 @@ RSpec.describe "Backspin matcher contract" do
     expect(recorded_command.to_h["stdout"]).to eq("id=100\n")
     expect(actual_command.to_h["stdout"]).to eq("id=200\n")
   end
-
 end

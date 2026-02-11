@@ -102,13 +102,9 @@ module Backspin
       diff_lines.join("\n")
     end
 
-    def expected_compare
-      @expected_compare
-    end
+    attr_reader :expected_compare
 
-    def actual_compare
-      @actual_compare
-    end
+    attr_reader :actual_compare
 
     def build_comparison_snapshot(snapshot, filter:, filter_on:)
       data = deep_dup(snapshot.to_h)
@@ -160,6 +156,5 @@ module Backspin
         @data
       end
     end
-
   end
 end
