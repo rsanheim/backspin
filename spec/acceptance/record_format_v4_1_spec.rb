@@ -69,6 +69,56 @@ RSpec.describe "Record format v4.1" do
     expect(record_data["snapshot"]["stdout"]).to eq("second\n")
   end
 
+  it "verifies a run against a v4.0 record" do
+    record_path = Backspin.configuration.backspin_dir.join("verify_v4_0_run.yml")
+    FileUtils.mkdir_p(File.dirname(record_path))
+    File.write(record_path, {
+      "format_version" => "4.0",
+      "recorded_at" => "2026-01-01T10:00:00Z",
+      "snapshot" => {
+        "command_type" => "Open3::Capture3",
+        "args" => ["echo", "hello"],
+        "stdout" => "hello\n",
+        "stderr" => "",
+        "status" => 0,
+        "recorded_at" => "2026-01-01T10:00:00Z"
+      }
+    }.to_yaml)
+
+    result = Backspin.run(["echo", "hello"], name: "verify_v4_0_run", mode: :verify)
+
+    expect(result.verified?).to eq(true)
+
+    unchanged_record = YAML.load_file(record_path)
+    expect(unchanged_record["format_version"]).to eq("4.0")
+  end
+
+  it "verifies a capture against a v4.0 record" do
+    record_path = Backspin.configuration.backspin_dir.join("verify_v4_0_capture.yml")
+    FileUtils.mkdir_p(File.dirname(record_path))
+    File.write(record_path, {
+      "format_version" => "4.0",
+      "recorded_at" => "2026-01-01T10:00:00Z",
+      "snapshot" => {
+        "command_type" => "Backspin::Capturer",
+        "args" => ["<captured block>"],
+        "stdout" => "hello\n",
+        "stderr" => "",
+        "status" => 0,
+        "recorded_at" => "2026-01-01T10:00:00Z"
+      }
+    }.to_yaml)
+
+    result = Backspin.capture("verify_v4_0_capture", mode: :verify) do
+      puts "hello"
+    end
+
+    expect(result.verified?).to eq(true)
+
+    unchanged_record = YAML.load_file(record_path)
+    expect(unchanged_record["format_version"]).to eq("4.0")
+  end
+
   it "upgrades a 4.0 record to v4.1 metadata on re-record" do
     record_path = Backspin.configuration.backspin_dir.join("upgrade_from_v4_0.yml")
     FileUtils.mkdir_p(File.dirname(record_path))
