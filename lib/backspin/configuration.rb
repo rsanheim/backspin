@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "logger"
 require "pathname"
 
 module Backspin
@@ -10,6 +11,8 @@ module Backspin
     attr_accessor :backspin_dir
     # Whether to raise an exception when verification fails in `run`/`capture` - defaults to true
     attr_accessor :raise_on_verification_failure
+    # Logger for Backspin diagnostics - defaults to WARN level, logfmt-lite format
+    attr_accessor :logger
     # Regex patterns to scrub from saved output
     attr_reader :credential_patterns
 
@@ -18,6 +21,7 @@ module Backspin
       @raise_on_verification_failure = true
       @credential_patterns = default_credential_patterns
       @backspin_dir = Pathname(Dir.pwd).join("fixtures", "backspin")
+      @logger = default_logger
     end
 
     def add_credential_pattern(pattern)
@@ -33,6 +37,15 @@ module Backspin
     end
 
     private
+
+    def default_logger
+      logger = Logger.new($stdout)
+      logger.level = Logger::WARN
+      logger.formatter = proc { |severity, _time, _progname, msg|
+        "level=#{severity.downcase} lib=backspin #{msg}\n"
+      }
+      logger
+    end
 
     # Some default patterns for common credential types
     def default_credential_patterns

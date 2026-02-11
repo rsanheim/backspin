@@ -6,6 +6,10 @@ require "timecop"
 require "tmpdir"
 require_relative "support/backspin_helper"
 
+Backspin.configure do |config|
+  config.logger = nil
+end
+
 RSpec.configure do |config|
   config.filter_run_when_matching :focus
   config.disable_monkey_patching!
@@ -16,7 +20,7 @@ RSpec.configure do |config|
 
   # Reset configuration after each test
   config.after(:each) do
-    # Reset configuration to defaults
+    ENV.delete("BACKSPIN_MODE")
     Backspin.reset_configuration!
   end
 

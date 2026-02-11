@@ -14,6 +14,8 @@ require "backspin/backspin_result"
 require "backspin/recorder"
 
 module Backspin
+  VALID_MODES = %i[auto record verify].freeze
+
   class RecordNotFoundError < StandardError; end
 
   class VerificationError < StandardError
@@ -242,8 +244,26 @@ module Backspin
     def determine_mode(mode_option, record_path)
       return mode_option if mode_option && mode_option != :auto
 
-      # Auto mode: record if file doesn't exist, verify if it does
-      File.exist?(record_path) ? :verify : :record
+      env_mode = mode_from_env
+      if env_mode && env_mode != :auto
+        configuration.logger&.debug { "event=mode_resolved mode=#{env_mode} source=env record=#{record_path}" }
+        return env_mode
+      end
+
+      resolved = File.exist?(record_path) ? :verify : :record
+      configuration.logger&.debug { "event=mode_resolved mode=#{resolved} source=auto record=#{record_path}" }
+      resolved
+    end
+
+    def mode_from_env
+      raw = ENV["BACKSPIN_MODE"]
+      return if raw.nil? || raw.strip.empty?
+
+      mode = raw.strip.downcase.to_sym
+      return mode if VALID_MODES.include?(mode)
+
+      raise ArgumentError,
+        "Invalid BACKSPIN_MODE value: #{raw.inspect}. Allowed values: auto, record, verify"
     end
 
     def validate_mode!(mode)

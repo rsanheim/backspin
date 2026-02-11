@@ -91,6 +91,26 @@ result = Backspin.run(["echo", "hello"], name: "echo_test", mode: :verify)
 expect(result.verified?).to be true
 ```
 
+### Environment Variable Mode Override
+
+Set `BACKSPIN_MODE` to globally force a recording mode without changing any test code:
+
+```bash
+# Re-record all fixtures
+BACKSPIN_MODE=record bundle exec rspec
+
+# Verify-only (CI, no accidental re-records)
+BACKSPIN_MODE=verify bundle exec rspec
+```
+
+Precedence (highest to lowest):
+
+1. Explicit `mode:` kwarg (`:record` or `:verify`)
+2. `BACKSPIN_MODE` environment variable
+3. Auto-detection (record if no file exists, verify if it does)
+
+Allowed values: `auto`, `record`, `verify` (case-insensitive). Invalid values raise `ArgumentError`.
+
 ### Record Metadata
 
 Backspin writes records using `format_version: "4.1"` with top-level metadata:
@@ -243,6 +263,34 @@ result = Backspin.run(["echo", "different"], name: "my_test")
 Backspin.reset_configuration!
 ```
 
+### Logging
+
+Backspin includes a configurable logger for diagnostics. By default it is set to WARN level; but most messages are logged at DEBUG level. 
+So if you are looking for more detailed logs, you can set the logger to DEBUG level:
+
+```ruby
+Backspin.configure do |config|
+  config.logger = Logger.new($stdout)
+  config.logger.level = Logger::DEBUG
+end
+```
+
+To replace the logger entirely:
+
+```ruby
+Backspin.configure do |config|
+  config.logger = Logger.new("log/backspin.log")
+end
+```
+
+To disable Backspin logging entirely (for example in tests):
+
+```ruby
+Backspin.configure do |config|
+  config.logger = nil
+end
+```
+
 ### Credential Scrubbing
 
 If the CLI interaction you are recording contains sensitive data in stdout/stderr, you should be careful to make sure it is not recorded to YAML.
@@ -273,6 +321,18 @@ Automatic scrubbing includes:
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests.
+
+This repo also includes a decoupled full-stack fixture gem at `fixtures/projects/dummy_cli_gem` that uses Backspin the way downstream projects do. Run it with:
+
+```bash
+bundle exec rake full_stack:dummy_app
+```
+
+To re-record that fixture's committed YAML snapshots:
+
+```bash
+bundle exec rake full_stack:record_dummy_app
+```
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 

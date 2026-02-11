@@ -1,12 +1,15 @@
 # Changelog
 
+## 0.12.0
+* Added `BACKSPIN_MODE` environment variable to globally override recording mode (`auto`, `record`, `verify`).
+* Explicit `mode:` kwarg still takes highest precedence, followed by the env var, then auto-detection.
+* Added configurable logger to `Backspin::Configuration` (defaults to WARN level, logfmt-lite format, and can be disabled with `config.logger = nil`).
+
 ## 0.11.0 - 2026-02-11
 * Added immutable top-level `first_recorded_at` metadata for record files.
 * Added mutable top-level `recorded_at` metadata that updates on each successful re-record.
 * Added top-level `record_count`, incremented on each successful record write.
-* Record format now writes `format_version: 4.1`; loading remains backward-compatible with 4.0 record files.
-* Added acceptance coverage for v4.1 schema and 4.0-to-4.1 upgrade behavior.
-* Removed legacy committed `.yml` record fixtures from old schema versions.
+* Bumped record format to 4.1; loading remains backward-compatible with 4.0 record files.
 
 ## 0.10.0 - 2026-02-11
 * Added `filter_on` to `Backspin.run` and `Backspin.capture` (`:both` default, `:record` opt-out).
@@ -19,7 +22,6 @@
 * Breaking: result convenience accessors (`result.stdout`, `result.stderr`, `result.status`) were removed in favor of snapshot access.
 * Breaking: record format bumped to 4.0 and now persists a single `snapshot` object (v3 records are rejected).
 * Simplification: removed legacy `Command`, `CommandResult`, and `RecordResult` layers; matcher/diff now operate directly on snapshots.
-* Added focused coverage for the new result contract and capture stream restoration behavior.
 * Updated project docs to reflect the BackspinResult + Snapshot API surface.
 
 ## 0.8.0 - 2026-02-05
