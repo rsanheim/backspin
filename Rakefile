@@ -25,8 +25,11 @@ namespace :spec do
 
   desc "Re-record Backspin YAML fixtures for the dummy fixture gem"
   task :fake_gem_record do
+    original_record_mode = ENV["RECORD_MODE"]
     ENV["RECORD_MODE"] = "record"
     run_in_fake_gem("bundle exec rspec")
+  ensure
+    ENV["RECORD_MODE"] = original_record_mode
   end
 end
 
