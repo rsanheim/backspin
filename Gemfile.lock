@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    backspin (0.11.0)
+    backspin (0.12.0)
       logger
 
 GEM
