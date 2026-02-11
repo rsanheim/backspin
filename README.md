@@ -91,6 +91,26 @@ result = Backspin.run(["echo", "hello"], name: "echo_test", mode: :verify)
 expect(result.verified?).to be true
 ```
 
+### Environment Variable Mode Override
+
+Set `BACKSPIN_MODE` to globally force a recording mode without changing any test code:
+
+```bash
+# Re-record all fixtures
+BACKSPIN_MODE=record bundle exec rspec
+
+# Verify-only (CI, no accidental re-records)
+BACKSPIN_MODE=verify bundle exec rspec
+```
+
+Precedence (highest to lowest):
+
+1. Explicit `mode:` kwarg (`:record` or `:verify`)
+2. `BACKSPIN_MODE` environment variable
+3. Auto-detection (record if no file exists, verify if it does)
+
+Allowed values: `auto`, `record`, `verify` (case-insensitive). Invalid values raise `ArgumentError`.
+
 ### Environment Variables
 
 ```ruby
@@ -219,6 +239,30 @@ result = Backspin.run(["echo", "different"], name: "my_test")
 # result.verified? will be false but won't raise
 
 Backspin.reset_configuration!
+```
+
+### Logging
+
+Backspin includes a configurable logger for diagnostics. By default it logs at `WARN` level to stdout using a logfmt-lite format:
+
+```
+level=debug lib=backspin event=mode_resolved mode=record source=env record=fixtures/backspin/my_test.yml
+```
+
+To enable debug logging:
+
+```ruby
+Backspin.configure do |config|
+  config.logger.level = Logger::DEBUG
+end
+```
+
+To replace the logger entirely:
+
+```ruby
+Backspin.configure do |config|
+  config.logger = Logger.new("log/backspin.log")
+end
 ```
 
 ### Credential Scrubbing

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.0
+
+* Added `BACKSPIN_MODE` environment variable to globally override recording mode (`auto`, `record`, `verify`).
+* Explicit `mode:` kwarg still takes highest precedence, followed by the env var, then auto-detection.
+* Added configurable logger to `Backspin::Configuration` (defaults to WARN level, logfmt-lite format).
+* Added `logger` gem as a runtime dependency (required for Ruby 4.0+).
+
 ## 0.10.0 - 2026-02-11
 * Added `filter_on` to `Backspin.run` and `Backspin.capture` (`:both` default, `:record` opt-out).
 * Changed default filter behavior: `filter` now applies during verify comparisons/diffs when `filter_on: :both`.

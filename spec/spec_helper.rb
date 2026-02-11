@@ -16,7 +16,7 @@ RSpec.configure do |config|
 
   # Reset configuration after each test
   config.after(:each) do
-    # Reset configuration to defaults
+    ENV.delete("BACKSPIN_MODE")
     Backspin.reset_configuration!
   end
 
