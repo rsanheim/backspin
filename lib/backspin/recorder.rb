@@ -19,8 +19,8 @@ module Backspin
     def perform_capture_recording
       captured_stdout, captured_stderr, output = capture_output { yield }
 
-      command = Command.new(
-        method_class: Backspin::Capturer,
+      actual_snapshot = Snapshot.new(
+        command_type: Backspin::Capturer,
         args: ["<captured block>"],
         stdout: captured_stdout,
         stderr: captured_stderr,
@@ -28,29 +28,31 @@ module Backspin
         recorded_at: Time.now.iso8601
       )
 
-      record.add_command(command)
+      record.set_snapshot(actual_snapshot)
       record.save(filter: @filter)
 
-      RecordResult.new(output: output, mode: :record, record: record)
+      BackspinResult.new(
+        mode: :record,
+        record_path: record.path,
+        actual: actual_snapshot,
+        output: output
+      )
     end
 
     # Performs capture verification by capturing output and comparing with recorded values
     def perform_capture_verification
       raise RecordNotFoundError, "Record not found: #{record.path}" unless record.exists?
-      raise RecordNotFoundError, "No commands found in record #{record.path}" if record.empty?
-      if record.commands.size != 1
-        raise RecordFormatError, "Invalid record format: expected 1 command for capture, found #{record.commands.size}"
-      end
+      raise RecordNotFoundError, "No snapshot found in record #{record.path}" if record.empty?
 
-      recorded_command = record.commands.first
-      unless recorded_command.method_class == Backspin::Capturer
+      expected_snapshot = record.snapshot
+      unless expected_snapshot.command_type == Backspin::Capturer
         raise RecordFormatError, "Invalid record format: expected Backspin::Capturer for capture"
       end
 
       captured_stdout, captured_stderr, output = capture_output { yield }
 
-      actual_command = Command.new(
-        method_class: Backspin::Capturer,
+      actual_snapshot = Snapshot.new(
+        command_type: Backspin::Capturer,
         args: ["<captured block>"],
         stdout: captured_stdout,
         stderr: captured_stderr,
@@ -58,18 +60,19 @@ module Backspin
       )
 
       command_diff = CommandDiff.new(
-        recorded_command: recorded_command,
-        actual_command: actual_command,
+        expected: expected_snapshot,
+        actual: actual_snapshot,
         matcher: @matcher
       )
 
-      RecordResult.new(
-        output: output,
+      BackspinResult.new(
         mode: :verify,
+        record_path: record.path,
+        actual: actual_snapshot,
+        expected: expected_snapshot,
         verified: command_diff.verified?,
-        record: record,
-        command_diffs: [command_diff],
-        actual_commands: [actual_command]
+        command_diff: command_diff,
+        output: output
       )
     end
 

@@ -4,16 +4,16 @@ require "spec_helper"
 
 RSpec.describe Backspin::CommandDiff do
   it "includes stdout, stderr, and status diffs in order" do
-    recorded_command = Backspin::Command.new(
-      method_class: Open3::Capture3,
+    expected_snapshot = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
       args: ["echo", "recorded"],
       stdout: "one\n",
       stderr: "err\n",
       status: 0
     )
 
-    actual_command = Backspin::Command.new(
-      method_class: Open3::Capture3,
+    actual_snapshot = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
       args: ["echo", "actual"],
       stdout: "two\n",
       stderr: "bad\n",
@@ -21,8 +21,8 @@ RSpec.describe Backspin::CommandDiff do
     )
 
     diff = described_class.new(
-      recorded_command: recorded_command,
-      actual_command: actual_command
+      expected: expected_snapshot,
+      actual: actual_snapshot
     ).diff
 
     expect(diff).to include("[stdout]")

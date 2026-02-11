@@ -1,24 +1,23 @@
 # frozen_string_literal: true
 
 module Backspin
-  # Represents the difference between a recorded command and actual execution
-  # Handles verification and diff generation for a single command
+  # Represents the difference between expected and actual snapshots.
   class CommandDiff
-    attr_reader :recorded_command, :actual_command, :matcher
+    attr_reader :expected, :actual, :matcher
 
-    def initialize(recorded_command:, actual_command:, matcher: nil)
-      @recorded_command = recorded_command
-      @actual_command = actual_command
+    def initialize(expected:, actual:, matcher: nil)
+      @expected = expected
+      @actual = actual
       @matcher = Matcher.new(
         config: matcher,
-        recorded_command: recorded_command,
-        actual_command: actual_command
+        expected: expected,
+        actual: actual
       )
     end
 
-    # @return [Boolean] true if the command output matches
+    # @return [Boolean] true if the snapshot output matches.
     def verified?
-      return false unless method_classes_match?
+      return false unless command_types_match?
 
       @matcher.match?
     end
@@ -28,23 +27,23 @@ module Backspin
       return nil if verified?
 
       parts = []
-      recorded_hash = recorded_command.to_h
-      actual_hash = actual_command.to_h
+      expected_hash = expected.to_h
+      actual_hash = actual.to_h
 
-      unless method_classes_match?
-        parts << "Command type mismatch: expected #{recorded_command.method_class.name}, got #{actual_command.method_class.name}"
+      unless command_types_match?
+        parts << "Command type mismatch: expected #{expected.command_type.name}, got #{actual.command_type.name}"
       end
 
-      if recorded_hash["stdout"] != actual_hash["stdout"]
-        parts << stdout_diff(recorded_hash["stdout"], actual_hash["stdout"])
+      if expected_hash["stdout"] != actual_hash["stdout"]
+        parts << stdout_diff(expected_hash["stdout"], actual_hash["stdout"])
       end
 
-      if recorded_hash["stderr"] != actual_hash["stderr"]
-        parts << stderr_diff(recorded_hash["stderr"], actual_hash["stderr"])
+      if expected_hash["stderr"] != actual_hash["stderr"]
+        parts << stderr_diff(expected_hash["stderr"], actual_hash["stderr"])
       end
 
-      if recorded_hash["status"] != actual_hash["status"]
-        parts << "Exit status: expected #{recorded_hash["status"]}, got #{actual_hash["status"]}"
+      if expected_hash["status"] != actual_hash["status"]
+        parts << "Exit status: expected #{expected_hash["status"]}, got #{actual_hash["status"]}"
       end
 
       parts.join("\n\n")
@@ -61,12 +60,12 @@ module Backspin
 
     private
 
-    def method_classes_match?
-      recorded_command.method_class == actual_command.method_class
+    def command_types_match?
+      expected.command_type == actual.command_type
     end
 
     def failure_reason
-      unless method_classes_match?
+      unless command_types_match?
         return "command type mismatch"
       end
 

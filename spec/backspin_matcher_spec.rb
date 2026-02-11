@@ -51,8 +51,8 @@ RSpec.describe "Backspin matcher contract" do
   end
 
   it "defaults to matching stdout/stderr/status only" do
-    recorded_command = Backspin::Command.new(
-      method_class: Open3::Capture3,
+    recorded_command = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
       args: ["echo", "recorded"],
       env: {"FOO" => "recorded"},
       stdout: "same\n",
@@ -60,8 +60,8 @@ RSpec.describe "Backspin matcher contract" do
       status: 0
     )
 
-    actual_command = Backspin::Command.new(
-      method_class: Open3::Capture3,
+    actual_command = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
       args: ["echo", "actual"],
       env: {"FOO" => "actual"},
       stdout: "same\n",
@@ -71,8 +71,8 @@ RSpec.describe "Backspin matcher contract" do
 
     matcher = Backspin::Matcher.new(
       config: nil,
-      recorded_command: recorded_command,
-      actual_command: actual_command
+      expected: recorded_command,
+      actual: actual_command
     )
 
     expect(matcher.match?).to be true
@@ -80,16 +80,16 @@ RSpec.describe "Backspin matcher contract" do
   end
 
   it "reports all output/status differences for the default matcher" do
-    recorded_command = Backspin::Command.new(
-      method_class: Open3::Capture3,
+    recorded_command = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
       args: ["echo", "recorded"],
       stdout: "one\n",
       stderr: "err\n",
       status: 0
     )
 
-    actual_command = Backspin::Command.new(
-      method_class: Open3::Capture3,
+    actual_command = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
       args: ["echo", "actual"],
       stdout: "two\n",
       stderr: "diff\n",
@@ -98,8 +98,8 @@ RSpec.describe "Backspin matcher contract" do
 
     matcher = Backspin::Matcher.new(
       config: nil,
-      recorded_command: recorded_command,
-      actual_command: actual_command
+      expected: recorded_command,
+      actual: actual_command
     )
 
     expect(matcher.failure_reason).to include("stdout differs")
@@ -108,16 +108,16 @@ RSpec.describe "Backspin matcher contract" do
   end
 
   it "validates hash matcher keys and values" do
-    recorded_command = Backspin::Command.new(
-      method_class: Open3::Capture3,
+    recorded_command = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
       args: ["echo", "recorded"],
       stdout: "ok\n",
       stderr: "",
       status: 0
     )
 
-    actual_command = Backspin::Command.new(
-      method_class: Open3::Capture3,
+    actual_command = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
       args: ["echo", "actual"],
       stdout: "ok\n",
       stderr: "",
@@ -127,31 +127,31 @@ RSpec.describe "Backspin matcher contract" do
     expect do
       Backspin::Matcher.new(
         config: {bad: ->(_recorded, _actual) { true }},
-        recorded_command: recorded_command,
-        actual_command: actual_command
+        expected: recorded_command,
+        actual: actual_command
       )
     end.to raise_error(ArgumentError, /Invalid matcher key/)
 
     expect do
       Backspin::Matcher.new(
         config: {stdout: "nope"},
-        recorded_command: recorded_command,
-        actual_command: actual_command
+        expected: recorded_command,
+        actual: actual_command
       )
     end.to raise_error(ArgumentError, /must be callable/)
   end
 
   it "runs all hash matchers and reports each failure reason" do
-    recorded_command = Backspin::Command.new(
-      method_class: Open3::Capture3,
+    recorded_command = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
       args: ["echo", "recorded"],
       stdout: "ok\n",
       stderr: "err\n",
       status: 0
     )
 
-    actual_command = Backspin::Command.new(
-      method_class: Open3::Capture3,
+    actual_command = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
       args: ["echo", "actual"],
       stdout: "bad\n",
       stderr: "bad\n",
@@ -180,8 +180,8 @@ RSpec.describe "Backspin matcher contract" do
 
     matcher = Backspin::Matcher.new(
       config: matcher_config,
-      recorded_command: recorded_command,
-      actual_command: actual_command
+      expected: recorded_command,
+      actual: actual_command
     )
 
     expect(matcher.match?).to be false
@@ -193,8 +193,8 @@ RSpec.describe "Backspin matcher contract" do
   end
 
   it "ignores args and env for capture commands by default" do
-    recorded_command = Backspin::Command.new(
-      method_class: Backspin::Capturer,
+    recorded_command = Backspin::Snapshot.new(
+      command_type: Backspin::Capturer,
       args: ["<captured block>"],
       env: {"FOO" => "recorded"},
       stdout: "same\n",
@@ -202,8 +202,8 @@ RSpec.describe "Backspin matcher contract" do
       status: 0
     )
 
-    actual_command = Backspin::Command.new(
-      method_class: Backspin::Capturer,
+    actual_command = Backspin::Snapshot.new(
+      command_type: Backspin::Capturer,
       args: ["different args"],
       env: {"FOO" => "actual"},
       stdout: "same\n",
@@ -213,8 +213,8 @@ RSpec.describe "Backspin matcher contract" do
 
     matcher = Backspin::Matcher.new(
       config: nil,
-      recorded_command: recorded_command,
-      actual_command: actual_command
+      expected: recorded_command,
+      actual: actual_command
     )
 
     expect(matcher.match?).to be true

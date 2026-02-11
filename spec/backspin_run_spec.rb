@@ -15,33 +15,33 @@ RSpec.describe "Backspin.run" do
     ], name: "command_with_env", env: {"MY_ENV_VAR" => "hello"})
 
     expect(result).to be_recorded
-    expect(result.stdout).to eq("hello")
+    expect(result.actual.stdout).to eq("hello")
 
     record_path = Backspin.configuration.backspin_dir.join("command_with_env.yml")
     record_data = YAML.load_file(record_path)
 
-    expect(record_data["format_version"]).to eq("3.0")
-    command = record_data["commands"].first
-    expect(command["command_type"]).to eq("Open3::Capture3")
-    expect(command["args"]).to eq(["ruby", "-e", "print ENV.fetch('MY_ENV_VAR')"])
-    expect(command["env"]).to eq({"MY_ENV_VAR" => "hello"})
-    expect(command["status"]).to eq(0)
+    expect(record_data["format_version"]).to eq("4.0")
+    snapshot = record_data["snapshot"]
+    expect(snapshot["command_type"]).to eq("Open3::Capture3")
+    expect(snapshot["args"]).to eq(["ruby", "-e", "print ENV.fetch('MY_ENV_VAR')"])
+    expect(snapshot["env"]).to eq({"MY_ENV_VAR" => "hello"})
+    expect(snapshot["status"]).to eq(0)
   end
 
   it "does not record env when env is not provided" do
     Backspin.run(["echo", "no env"], name: "command_no_env")
 
     record_path = Backspin.configuration.backspin_dir.join("command_no_env.yml")
-    command = YAML.load_file(record_path)["commands"].first
-    expect(command).not_to have_key("env")
+    snapshot = YAML.load_file(record_path)["snapshot"]
+    expect(snapshot).not_to have_key("env")
   end
 
   it "records string commands as strings" do
     Backspin.run("echo hello", name: "string_command")
 
     record_path = Backspin.configuration.backspin_dir.join("string_command.yml")
-    command = YAML.load_file(record_path)["commands"].first
-    expect(command["args"]).to eq("echo hello")
+    snapshot = YAML.load_file(record_path)["snapshot"]
+    expect(snapshot["args"]).to eq("echo hello")
   end
 
   it "records then verifies by default when mode is omitted" do
@@ -63,20 +63,20 @@ RSpec.describe "Backspin.run" do
 
       result = Backspin.run(["ls", dir], name: "ls_array")
       expect(result).to be_recorded
-      expect(result.stdout).to include("a.txt")
-      expect(result.stdout).to include("b.txt")
+      expect(result.actual.stdout).to include("a.txt")
+      expect(result.actual.stdout).to include("b.txt")
 
       result = Backspin.run(["ls", dir], name: "ls_array")
       expect(result).to be_verified
     end
 
     result = Backspin.run("echo hello", name: "echo_string")
-    expect(result.stdout).to eq("hello\n")
+    expect(result.actual.stdout).to eq("hello\n")
     result = Backspin.run("echo hello", name: "echo_string")
     expect(result).to be_verified
 
     result = Backspin.run(["date", "+%Y"], name: "date_array")
-    expect(result.stdout).to match(/\A\d{4}\n\z/)
+    expect(result.actual.stdout).to match(/\A\d{4}\n\z/)
     result = Backspin.run(["date", "+%Y"], name: "date_array")
     expect(result).to be_verified
   end
@@ -84,9 +84,9 @@ RSpec.describe "Backspin.run" do
   it "captures stderr and non-zero exit status for failing commands" do
     result = Backspin.run(["sh", "-c", "echo error >&2; exit 1"], name: "stderr_status")
     expect(result).to be_recorded
-    expect(result.stdout).to eq("")
-    expect(result.stderr).to eq("error\n")
-    expect(result.status).to eq(1)
+    expect(result.actual.stdout).to eq("")
+    expect(result.actual.stderr).to eq("error\n")
+    expect(result.actual.status).to eq(1)
 
     result = Backspin.run(["sh", "-c", "echo error >&2; exit 1"], name: "stderr_status")
     expect(result).to be_verified
@@ -97,8 +97,8 @@ RSpec.describe "Backspin.run" do
     Backspin.run(["echo", "second"], name: "record_overwrite", mode: :record)
 
     record_path = Backspin.configuration.backspin_dir.join("record_overwrite.yml")
-    command = YAML.load_file(record_path)["commands"].first
-    expect(command["stdout"]).to eq("second\n")
+    snapshot = YAML.load_file(record_path)["snapshot"]
+    expect(snapshot["stdout"]).to eq("second\n")
   end
 
   it "verifies matching output and raises on mismatch by default" do
@@ -138,9 +138,8 @@ RSpec.describe "Backspin.run" do
 
     expect(result.verified?).to be false
     expect(result.error_message).to include("Output verification failed")
-    expect(result.stdout).to eq("actual\n")
-    expect(result.expected_stdout).to eq("expected\n")
-    expect(result.actual_stdout).to eq("actual\n")
+    expect(result.actual.stdout).to eq("actual\n")
+    expect(result.expected.stdout).to eq("expected\n")
   end
 
   it "requires a command when no block is provided" do
@@ -181,12 +180,12 @@ RSpec.describe "Backspin.run" do
     end.to raise_error(Backspin::RecordNotFoundError, /Record not found/)
   end
 
-  it "raises when record has multiple commands for run verification" do
+  it "raises when record format is missing snapshot data for run verification" do
     record_path = Backspin.configuration.backspin_dir.join("multi_command_verify.yml")
     FileUtils.mkdir_p(File.dirname(record_path))
     File.write(record_path, {
-      "format_version" => "3.0",
-      "first_recorded_at" => "2024-01-01T00:00:00Z",
+      "format_version" => "4.0",
+      "recorded_at" => "2024-01-01T00:00:00Z",
       "commands" => [
         {
           "command_type" => "Open3::Capture3",
@@ -209,7 +208,7 @@ RSpec.describe "Backspin.run" do
 
     expect do
       Backspin.run(["echo", "one"], name: "multi_command_verify", mode: :verify)
-    end.to raise_error(Backspin::RecordFormatError, /expected 1 command for run, found 2/)
+    end.to raise_error(Backspin::RecordFormatError, /missing snapshot/i)
   end
 
   it "raises when record command type is capture" do

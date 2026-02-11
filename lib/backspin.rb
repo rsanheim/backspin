@@ -6,13 +6,12 @@ require "open3"
 require "pathname"
 require "backspin/version"
 require "backspin/configuration"
-require "backspin/command_result"
-require "backspin/command"
+require "backspin/snapshot"
 require "backspin/matcher"
 require "backspin/command_diff"
 require "backspin/record"
+require "backspin/backspin_result"
 require "backspin/recorder"
-require "backspin/record_result"
 
 module Backspin
   class RecordNotFoundError < StandardError; end
@@ -29,12 +28,12 @@ module Backspin
       result.diff
     end
 
-    def recorded_commands
-      result.command_diffs.map(&:recorded_command)
+    def expected_snapshot
+      result.expected
     end
 
-    def actual_commands
-      result.command_diffs.map(&:actual_command)
+    def actual_snapshot
+      result.actual
     end
   end
 
@@ -73,7 +72,7 @@ module Backspin
     # @param mode [Symbol] Recording mode - :auto, :record, :verify
     # @param matcher [Proc, Hash] Custom matcher for verification
     # @param filter [Proc] Custom filter for recorded data
-    # @return [RecordResult] Result object with output and status
+    # @return [BackspinResult] Aggregate result for this run
     def run(command = nil, name:, env: nil, mode: :auto, matcher: nil, filter: nil, &block)
       if block_given?
         raise ArgumentError, "command must be omitted when using a block" unless command.nil?
@@ -93,7 +92,7 @@ module Backspin
     # @param mode [Symbol] Recording mode - :auto, :record, :verify
     # @param matcher [Proc, Hash] Custom matcher for verification
     # @param filter [Proc] Custom filter for recorded data
-    # @return [RecordResult] Result object with captured output
+    # @return [BackspinResult] Aggregate result for this run
     def capture(record_name, mode: :auto, matcher: nil, filter: nil, &block)
       raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
       raise ArgumentError, "block is required" unless block_given?
@@ -146,8 +145,8 @@ module Backspin
       result = case mode
       when :record
         stdout, stderr, status = execute_command(command, normalized_env)
-        command_result = Command.new(
-          method_class: Open3::Capture3,
+        actual_snapshot = Snapshot.new(
+          command_type: Open3::Capture3,
           args: command,
           env: normalized_env,
           stdout: stdout,
@@ -155,38 +154,41 @@ module Backspin
           status: status.exitstatus,
           recorded_at: Time.now.iso8601
         )
-        record.add_command(command_result)
+        record.set_snapshot(actual_snapshot)
         record.save(filter: filter)
-        RecordResult.new(output: [stdout, stderr, status], mode: :record, record: record)
+        BackspinResult.new(
+          mode: :record,
+          record_path: record.path,
+          actual: actual_snapshot,
+          output: [stdout, stderr, status]
+        )
       when :verify
         raise RecordNotFoundError, "Record not found: #{record.path}" unless record.exists?
-        raise RecordNotFoundError, "No commands found in record #{record.path}" if record.empty?
-        if record.commands.size != 1
-          raise RecordFormatError, "Invalid record format: expected 1 command for run, found #{record.commands.size}"
-        end
+        raise RecordNotFoundError, "No snapshot found in record #{record.path}" if record.empty?
 
-        recorded_command = record.commands.first
-        unless recorded_command.method_class == Open3::Capture3
+        expected_snapshot = record.snapshot
+        unless expected_snapshot.command_type == Open3::Capture3
           raise RecordFormatError, "Invalid record format: expected Open3::Capture3 for run"
         end
 
         stdout, stderr, status = execute_command(command, normalized_env)
-        actual_command = Command.new(
-          method_class: Open3::Capture3,
+        actual_snapshot = Snapshot.new(
+          command_type: Open3::Capture3,
           args: command,
           env: normalized_env,
           stdout: stdout,
           stderr: stderr,
           status: status.exitstatus
         )
-        command_diff = CommandDiff.new(recorded_command: recorded_command, actual_command: actual_command, matcher: matcher)
-        RecordResult.new(
-          output: [stdout, stderr, status],
+        command_diff = CommandDiff.new(expected: expected_snapshot, actual: actual_snapshot, matcher: matcher)
+        BackspinResult.new(
           mode: :verify,
+          record_path: record.path,
+          actual: actual_snapshot,
+          expected: expected_snapshot,
           verified: command_diff.verified?,
-          record: record,
-          command_diffs: [command_diff],
-          actual_commands: [actual_command]
+          command_diff: command_diff,
+          output: [stdout, stderr, status]
         )
       else
         raise ArgumentError, "Unknown mode: #{mode}"
@@ -219,7 +221,7 @@ module Backspin
       return unless configuration.raise_on_verification_failure && result.verified? == false
 
       error_message = "Backspin verification failed!\n"
-      error_message += "Record: #{result.record.path}\n"
+      error_message += "Record: #{result.record_path}\n"
       details = result.error_message || result.diff
       error_message += "\n#{details}" if details
 

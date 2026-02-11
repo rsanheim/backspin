@@ -19,9 +19,9 @@ RSpec.describe Backspin::Recorder do
 
     expect(result).to be_recorded
     expect(result.output).to eq(:ok)
-    expect(record.commands.size).to eq(1)
-    expect(record.commands.first.stdout).to include("hello\n")
-    expect(record.commands.first.stderr).to include("err\n")
+    expect(record.snapshot).not_to be_nil
+    expect(record.snapshot.stdout).to include("hello\n")
+    expect(record.snapshot.stderr).to include("err\n")
   end
 
   it "restores stdout and stderr when capture block raises" do

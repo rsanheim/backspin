@@ -31,17 +31,17 @@ RSpec.describe "Backspin.capture" do
     expect(record_path).to exist
 
     yaml_content = YAML.load_file(record_path)
-    expect(yaml_content["format_version"]).to eq("3.0")
+    expect(yaml_content["format_version"]).to eq("4.0")
 
-    command = yaml_content["commands"].first
-    expect(command["command_type"]).to eq("Backspin::Capturer")
-    expect(command["args"]).to eq(["<captured block>"])
-    expect(command["stdout"]).to include("Hello from puts")
-    expect(command["stdout"]).to include("Direct stdout write")
-    expect(command["stdout"]).to include("From system command")
-    expect(command["stdout"]).to include("From backticks")
-    expect(command["stdout"]).to include("From Open3")
-    expect(command["stderr"]).to include("Error message")
+    snapshot = yaml_content["snapshot"]
+    expect(snapshot["command_type"]).to eq("Backspin::Capturer")
+    expect(snapshot["args"]).to eq(["<captured block>"])
+    expect(snapshot["stdout"]).to include("Hello from puts")
+    expect(snapshot["stdout"]).to include("Direct stdout write")
+    expect(snapshot["stdout"]).to include("From system command")
+    expect(snapshot["stdout"]).to include("From backticks")
+    expect(snapshot["stdout"]).to include("From Open3")
+    expect(snapshot["stderr"]).to include("Error message")
   end
 
   it "supports block capture via Backspin.run" do
@@ -53,7 +53,7 @@ RSpec.describe "Backspin.capture" do
     expect(result.output).to eq(:ok)
     record_path = Backspin.configuration.backspin_dir.join("block_capture.yml")
     record_data = YAML.load_file(record_path)
-    expect(record_data["commands"].first["command_type"]).to eq("Backspin::Capturer")
+    expect(record_data["snapshot"]["command_type"]).to eq("Backspin::Capturer")
   end
 
   it "requires a record name" do
@@ -74,12 +74,12 @@ RSpec.describe "Backspin.capture" do
     end.to raise_error(Backspin::RecordNotFoundError, /Record not found/)
   end
 
-  it "raises when record has multiple commands for capture verification" do
+  it "raises when record format is missing snapshot data" do
     record_path = Backspin.configuration.backspin_dir.join("multi_capture_verify.yml")
     FileUtils.mkdir_p(File.dirname(record_path))
     File.write(record_path, {
-      "format_version" => "3.0",
-      "first_recorded_at" => "2024-01-01T00:00:00Z",
+      "format_version" => "4.0",
+      "recorded_at" => "2024-01-01T00:00:00Z",
       "commands" => [
         {
           "command_type" => "Backspin::Capturer",
@@ -102,7 +102,7 @@ RSpec.describe "Backspin.capture" do
 
     expect do
       Backspin.capture("multi_capture_verify", mode: :verify) { puts "hi" }
-    end.to raise_error(Backspin::RecordFormatError, /expected 1 command for capture, found 2/)
+    end.to raise_error(Backspin::RecordFormatError, /missing snapshot/i)
   end
 
   it "raises when record command type is run" do
@@ -128,9 +128,8 @@ RSpec.describe "Backspin.capture" do
 
     expect(result.verified?).to be false
     expect(result.error_message).to include("Output verification failed")
-    expect(result.stdout).to eq("Different output\n")
-    expect(result.expected_stdout).to eq("Expected output\n")
-    expect(result.actual_stdout).to eq("Different output\n")
+    expect(result.actual.stdout).to eq("Different output\n")
+    expect(result.expected.stdout).to eq("Expected output\n")
   end
 
   it "passes status 0 to capture matchers" do

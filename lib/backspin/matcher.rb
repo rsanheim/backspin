@@ -1,23 +1,22 @@
 # frozen_string_literal: true
 
 module Backspin
-  # Handles matching logic between recorded and actual commands
+  # Handles matching logic between expected and actual snapshots.
   class Matcher
-    attr_reader :config, :recorded_command, :actual_command
+    attr_reader :config, :expected, :actual
 
-    def initialize(config:, recorded_command:, actual_command:)
+    def initialize(config:, expected:, actual:)
       @config = normalize_config(config)
-      @recorded_command = recorded_command
-      @actual_command = actual_command
+      @expected = expected
+      @actual = actual
     end
 
-    # @return [Boolean] true if commands match according to the configured matcher
+    # @return [Boolean] true if snapshots match according to configured matcher
     def match?
       if config.nil?
-        # Default behavior: check all fields for equality
-        default_matcher.call(recorded_command.to_h, actual_command.to_h)
+        default_matcher.call(expected.to_h, actual.to_h)
       elsif config.is_a?(Proc)
-        config.call(recorded_command.to_h, actual_command.to_h)
+        config.call(expected.to_h, actual.to_h)
       elsif config.is_a?(Hash)
         verify_with_hash_matcher
       else
@@ -30,24 +29,22 @@ module Backspin
       reasons = []
 
       if config.nil?
-        # Default matcher checks all fields
-        recorded_hash = recorded_command.to_h
-        actual_hash = actual_command.to_h
+        expected_hash = expected.to_h
+        actual_hash = actual.to_h
 
-        reasons << "stdout differs" if recorded_hash["stdout"] != actual_hash["stdout"]
-        reasons << "stderr differs" if recorded_hash["stderr"] != actual_hash["stderr"]
-        reasons << "exit status differs" if recorded_hash["status"] != actual_hash["status"]
+        reasons << "stdout differs" if expected_hash["stdout"] != actual_hash["stdout"]
+        reasons << "stderr differs" if expected_hash["stderr"] != actual_hash["stderr"]
+        reasons << "exit status differs" if expected_hash["status"] != actual_hash["status"]
       elsif config.is_a?(Hash)
-        recorded_hash = recorded_command.to_h
-        actual_hash = actual_command.to_h
+        expected_hash = expected.to_h
+        actual_hash = actual.to_h
 
-        # Only check matchers that were provided
         config.each do |field, matcher_proc|
           case field
           when :all
-            reasons << ":all matcher failed" unless matcher_proc.call(recorded_hash, actual_hash)
+            reasons << ":all matcher failed" unless matcher_proc.call(expected_hash, actual_hash)
           when :stdout, :stderr, :status
-            unless matcher_proc.call(recorded_hash[field.to_s], actual_hash[field.to_s])
+            unless matcher_proc.call(expected_hash[field.to_s], actual_hash[field.to_s])
               reasons << "#{field} custom matcher failed"
             end
           end
@@ -79,19 +76,16 @@ module Backspin
     end
 
     def verify_with_hash_matcher
-      recorded_hash = recorded_command.to_h
-      actual_hash = actual_command.to_h
+      expected_hash = expected.to_h
+      actual_hash = actual.to_h
 
-      # Override-based: only run matchers that are explicitly provided
-      # Use map to ensure all matchers run, then check if all passed
       results = config.map do |field, matcher_proc|
         case field
         when :all
-          matcher_proc.call(recorded_hash, actual_hash)
+          matcher_proc.call(expected_hash, actual_hash)
         when :stdout, :stderr, :status
-          matcher_proc.call(recorded_hash[field.to_s], actual_hash[field.to_s])
+          matcher_proc.call(expected_hash[field.to_s], actual_hash[field.to_s])
         else
-          # This should never happen due to normalize_config validation
           raise ArgumentError, "Unknown field: #{field}"
         end
       end

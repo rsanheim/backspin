@@ -33,7 +33,7 @@ RSpec.describe "Backspin credential scrubbing" do
     result = Backspin.run(["echo", "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"], name: "aws_keys")
 
     record_data = YAML.load_file(result.record_path)
-    expect(record_data["commands"].first["stdout"]).to eq("AWS_ACCESS_KEY_ID=********************\n")
+    expect(record_data["snapshot"]["stdout"]).to eq("AWS_ACCESS_KEY_ID=********************\n")
   end
 
   it "scrubs credentials from stderr" do
@@ -43,15 +43,15 @@ RSpec.describe "Backspin credential scrubbing" do
     )
 
     record_data = YAML.load_file(result.record_path)
-    expect(record_data["commands"].first["stdout"]).to eq("normal output\n")
-    expect(record_data["commands"].first["stderr"]).to eq("Error: Invalid #{"*" * 43}\n")
+    expect(record_data["snapshot"]["stdout"]).to eq("normal output\n")
+    expect(record_data["snapshot"]["stderr"]).to eq("Error: Invalid #{"*" * 43}\n")
   end
 
   it "scrubs credentials in command arguments" do
     result = Backspin.run(["echo", "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"], name: "args_aws_creds")
 
     record_data = YAML.load_file(result.record_path)
-    args = record_data["commands"].first["args"]
+    args = record_data["snapshot"]["args"]
     args_string = args.join(" ")
 
     expect(args_string).not_to include("AKIAIOSFODNN7EXAMPLE")
@@ -67,13 +67,13 @@ RSpec.describe "Backspin credential scrubbing" do
     )
 
     record_data = YAML.load_file(result.record_path)
-    expect(record_data["commands"].first["env"]).to eq({"AWS_ACCESS_KEY_ID" => "********************"})
+    expect(record_data["snapshot"]["env"]).to eq({"AWS_ACCESS_KEY_ID" => "********************"})
   end
 
   it "scrubs credentials in nested args and hashes" do
     api_key = "API_KEY=sk-1234567890abcdef1234567890abcdef"
-    command = Backspin::Command.new(
-      method_class: Open3::Capture3,
+    snapshot = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
       args: [
         "echo",
         ["AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"],
@@ -84,7 +84,7 @@ RSpec.describe "Backspin credential scrubbing" do
       status: 0
     )
 
-    args = command.to_h["args"]
+    args = snapshot.to_h["args"]
 
     expect(args[1].first).to eq("AWS_ACCESS_KEY_ID=********************")
     expect(args[2]["token"]).to eq("*" * api_key.length)
@@ -99,7 +99,7 @@ RSpec.describe "Backspin credential scrubbing" do
     result = Backspin.run(["echo", secret], name: "custom_scrub_run")
 
     record_data = YAML.load_file(result.record_path)
-    expect(record_data["commands"].first["stdout"]).to eq("#{"*" * secret.length}\n")
+    expect(record_data["snapshot"]["stdout"]).to eq("#{"*" * secret.length}\n")
   end
 
   it "scrubs custom patterns for capture records" do
@@ -113,7 +113,7 @@ RSpec.describe "Backspin credential scrubbing" do
     end
 
     record_data = YAML.load_file(result.record_path)
-    expect(record_data["commands"].first["stdout"]).to eq("#{"*" * secret.length}\n")
+    expect(record_data["snapshot"]["stdout"]).to eq("#{"*" * secret.length}\n")
   end
 
   it "scrubs output in verification diffs" do
@@ -135,9 +135,9 @@ RSpec.describe "Backspin credential scrubbing" do
     end
 
     record_data = YAML.load_file(result.record_path)
-    command = record_data["commands"].first
-    expect(command["stdout"]).to eq("AWS_ACCESS_KEY_ID=********************\n")
-    expect(command["stderr"]).to eq("Error: Invalid #{"*" * 43}\n")
+    snapshot = record_data["snapshot"]
+    expect(snapshot["stdout"]).to eq("AWS_ACCESS_KEY_ID=********************\n")
+    expect(snapshot["stderr"]).to eq("Error: Invalid #{"*" * 43}\n")
   end
 
   it "does not scrub when scrubbing is disabled" do
@@ -148,7 +148,7 @@ RSpec.describe "Backspin credential scrubbing" do
     result = Backspin.run(["echo", "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"], name: "no_scrub")
 
     record_data = YAML.load_file(result.record_path)
-    expect(record_data["commands"].first["stdout"]).to eq("AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE\n")
+    expect(record_data["snapshot"]["stdout"]).to eq("AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE\n")
   end
 
   it "does not scrub captured output when scrubbing is disabled" do
@@ -161,6 +161,6 @@ RSpec.describe "Backspin credential scrubbing" do
     end
 
     record_data = YAML.load_file(result.record_path)
-    expect(record_data["commands"].first["stdout"]).to eq("AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE\n")
+    expect(record_data["snapshot"]["stdout"]).to eq("AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE\n")
   end
 end
