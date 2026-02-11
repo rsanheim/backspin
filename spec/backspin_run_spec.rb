@@ -161,6 +161,12 @@ RSpec.describe "Backspin.run" do
     end.to raise_error(ArgumentError, /env must be a Hash/)
   end
 
+  it "rejects non-string/non-array commands" do
+    expect do
+      Backspin.run(123, name: "bad_command_type")
+    end.to raise_error(ArgumentError, /command must be a String or Array/)
+  end
+
   it "rejects env when using a block" do
     expect do
       Backspin.run(name: "block_env", env: {"FOO" => "bar"}) do

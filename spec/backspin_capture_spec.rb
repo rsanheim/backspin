@@ -128,6 +128,9 @@ RSpec.describe "Backspin.capture" do
 
     expect(result.verified?).to be false
     expect(result.error_message).to include("Output verification failed")
+    expect(result.stdout).to eq("Different output\n")
+    expect(result.expected_stdout).to eq("Expected output\n")
+    expect(result.actual_stdout).to eq("Different output\n")
   end
 
   it "passes status 0 to capture matchers" do
