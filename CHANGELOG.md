@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+* Added `filter_on` to `Backspin.run` and `Backspin.capture` (`:both` default, `:record` opt-out).
+* Changed default filter behavior: `filter` now applies during verify comparisons/diffs when `filter_on: :both`.
+* Matcher callbacks now receive mutable copies of comparison data so in-place mutations do not mutate snapshots.
+* Snapshot serialization is now immutable: `Snapshot#to_h` returns a frozen representation built at initialization.
+
 ## 0.9.0 - 2026-02-11
 * Breaking: `Backspin.run` and `Backspin.capture` now return `Backspin::BackspinResult` with explicit `result.actual` / `result.expected` snapshots.
 * Breaking: result convenience accessors (`result.stdout`, `result.stderr`, `result.status`) were removed in favor of snapshot access.

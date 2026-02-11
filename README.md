@@ -142,6 +142,8 @@ By default (`filter_on: :both`), Backspin applies `filter`:
 
 If you only want record-time filtering, use `filter_on: :record`.
 
+Migration note: older behavior applied `filter` only at record write. To preserve that behavior, set `filter_on: :record`.
+
 ```ruby
 normalize_filter = ->(snapshot) do
   snapshot.merge(
@@ -152,6 +154,14 @@ end
 # default: filter_on :both
 Backspin.run(["echo", "id=123"], name: "canonicalized", filter: normalize_filter)
 Backspin.run(["echo", "id=999"], name: "canonicalized", filter: normalize_filter) # verifies
+
+# capture also supports verify-time canonicalization
+Backspin.capture("capture_canonicalized", filter: normalize_filter) do
+  puts "id=123"
+end
+Backspin.capture("capture_canonicalized", filter: normalize_filter) do
+  puts "id=999"
+end
 
 # record-only filtering
 Backspin.run(["echo", "id=123"], name: "record_only", filter: normalize_filter, filter_on: :record)
