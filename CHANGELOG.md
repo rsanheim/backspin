@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.0 - 2026-02-11
 * Added `filter_on` to `Backspin.run` and `Backspin.capture` (`:both` default, `:record` opt-out).
 * Changed default filter behavior: `filter` now applies during verify comparisons/diffs when `filter_on: :both`.
 * Matcher callbacks now receive mutable copies of comparison data so in-place mutations do not mutate snapshots.
