@@ -12,8 +12,8 @@ RSpec.describe "Backspin credential scrubbing" do
       expect(Backspin.configuration.scrub_credentials).to be true
     end
 
-    it "uses a debug logger by default" do
-      expect(Backspin.configuration.logger.level).to eq(Logger::DEBUG)
+    it "uses a warn logger by default" do
+      expect(Backspin.configuration.logger.level).to eq(Logger::WARN)
     end
 
     it "can disable credential scrubbing" do

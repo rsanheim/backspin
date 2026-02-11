@@ -1,0 +1,18 @@
+---
+format_version: '4.1'
+first_recorded_at: '2026-02-11T07:43:21+00:00'
+recorded_at: '2026-02-11T07:43:21+00:00'
+record_count: 1
+snapshot:
+  command_type: Open3::Capture3
+  args:
+  - ruby
+  - exe/dummy_cli_gem
+  - echo
+  - hello from dummy gem
+  stdout: 'hello from dummy gem
+
+    '
+  stderr: ''
+  status: 0
+  recorded_at: '2026-02-11T07:43:21+00:00'

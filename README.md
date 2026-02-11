@@ -265,10 +265,14 @@ Backspin.reset_configuration!
 
 ### Logging
 
-Backspin includes a configurable logger for diagnostics. By default it logs at `DEBUG` level to stdout using a logfmt-lite format:
+Backspin includes a configurable logger for diagnostics. By default it is set to WARN level; but most messages are logged at DEBUG level. 
+So if you are looking for more detailed logs, you can set the logger to DEBUG level:
 
-```
-level=debug lib=backspin event=mode_resolved mode=record source=env record=fixtures/backspin/my_test.yml
+```ruby
+Backspin.configure do |config|
+  config.logger = Logger.new($stdout)
+  config.logger.level = Logger::DEBUG
+end
 ```
 
 To replace the logger entirely:
@@ -317,6 +321,18 @@ Automatic scrubbing includes:
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests.
+
+This repo also includes a decoupled full-stack fixture gem at `fixtures/projects/dummy_cli_gem` that uses Backspin the way downstream projects do. Run it with:
+
+```bash
+bundle exec rake full_stack:dummy_app
+```
+
+To re-record that fixture's committed YAML snapshots:
+
+```bash
+bundle exec rake full_stack:record_dummy_app
+```
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 
