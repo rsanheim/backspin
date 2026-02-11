@@ -134,7 +134,7 @@ For more matcher examples and detailed documentation, see [MATCHERS.md](MATCHERS
 
 ### Working with the Result Object
 
-The API returns a `RecordResult` object with helpful methods:
+The API returns a `Backspin::BackspinResult` object with helpful methods:
 
 ```ruby
 result = Backspin.run(["sh", "-c", "echo out; echo err >&2; exit 42"], name: "my_test")
@@ -143,11 +143,12 @@ result = Backspin.run(["sh", "-c", "echo out; echo err >&2; exit 42"], name: "my
 result.recorded?  # true on first run
 result.verified?  # true/false on subsequent runs, nil when recording
 
-# Access output (first command)
-result.stdout     # "out\n"
-result.stderr     # "err\n"
-result.status     # 42
-result.success?   # false (non-zero exit)
+# Access output snapshots
+result.actual.stdout   # "out\n"
+result.actual.stderr   # "err\n"
+result.actual.status   # 42
+result.expected        # nil in :record mode, populated in :verify mode
+result.success?        # false (non-zero exit)
 result.output     # [stdout, stderr, status] for command runs
 
 # Debug information

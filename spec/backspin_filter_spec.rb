@@ -19,7 +19,7 @@ RSpec.describe "Backspin record filters" do
     expect(scrubbed_seen).to eq("AWS_ACCESS_KEY_ID=********************\n")
     record_path = Backspin.configuration.backspin_dir.join("filter_run.yml")
     record_data = YAML.load_file(record_path)
-    expect(record_data["commands"].first["stdout"]).to eq("filtered\n")
+    expect(record_data["snapshot"]["stdout"]).to eq("filtered\n")
   end
 
   it "applies filters after scrubbing for capture records" do
@@ -37,8 +37,8 @@ RSpec.describe "Backspin record filters" do
     expect(scrubbed_seen).to eq("AWS_ACCESS_KEY_ID=********************\n")
     record_path = Backspin.configuration.backspin_dir.join("filter_capture.yml")
     record_data = YAML.load_file(record_path)
-    command = record_data["commands"].first
-    expect(command["stdout"]).to eq("filtered\n")
-    expect(command["stderr"]).to eq("filtered_err\n")
+    snapshot = record_data["snapshot"]
+    expect(snapshot["stdout"]).to eq("filtered\n")
+    expect(snapshot["stderr"]).to eq("filtered_err\n")
   end
 end

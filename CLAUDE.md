@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Backspin is a Ruby gem for characterization testing of command-line interfaces. It records and replays CLI interactions by capturing stdout, stderr, and exit status from shell commands - similar to how VCR works for HTTP interactions. Backspin uses "records" (YAML files) to store recorded command outputs.
+Backspin is a Ruby gem for characterization testing of command-line interfaces. It records and verifies CLI interactions by capturing stdout, stderr, and exit status from shell commands, similar to how VCR works for HTTP interactions. Backspin uses YAML "records" to store snapshots.
 
 ## Development Commands
 
@@ -45,16 +45,21 @@ bin/rake standard                # Alternative: Run via Rake task
 - Credential scrubbing logic
 - Configuration management (including `raise_on_verification_failure` which defaults to `true`)
 
-**Command Class** (`lib/backspin/command.rb`)
-- Represents a single CLI execution
-- Stores: args, stdout, stderr, status, recorded_at
+**Snapshot Class** (`lib/backspin/snapshot.rb`)
+- Represents a single captured execution snapshot
+- Stores: command type, args, env, stdout, stderr, status, recorded_at
+
+**BackspinResult Class** (`lib/backspin/backspin_result.rb`)
+- Return object from `run` and `capture`
+- Exposes `actual` and `expected` snapshots plus verification metadata
 
 **Record Class** (`lib/backspin/record.rb`)
 - Manages YAML record files
-- Handles recording/playback sequencing
+- Handles record/verify sequencing
 
-**RSpecMetadata** (`lib/backspin/rspec_metadata.rb`)
-- Auto-generates record names from RSpec context
+**Recorder Class** (`lib/backspin/recorder.rb`)
+- Implements block capture recording and verification
+- Restores stdout/stderr streams safely after capture
 
 ### Key Design Patterns
 

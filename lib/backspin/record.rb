@@ -4,8 +4,8 @@ module Backspin
   class RecordFormatError < StandardError; end
 
   class Record
-    FORMAT_VERSION = "3.0"
-    attr_reader :path, :commands, :first_recorded_at
+    FORMAT_VERSION = "4.0"
+    attr_reader :path, :snapshot, :recorded_at
 
     def self.load_or_create(path)
       record = new(path)
@@ -35,28 +35,29 @@ module Backspin
 
     def initialize(path)
       @path = path
-      @commands = []
-      @first_recorded_at = nil
+      @snapshot = nil
+      @recorded_at = nil
     end
 
-    def add_command(command)
-      @commands << command
-      @first_recorded_at ||= command.recorded_at
+    def set_snapshot(snapshot)
+      @snapshot = snapshot
+      @recorded_at ||= snapshot.recorded_at
       self
     end
 
     def save(filter: nil)
       FileUtils.mkdir_p(File.dirname(@path))
       record_data = {
-        "first_recorded_at" => @first_recorded_at,
         "format_version" => FORMAT_VERSION,
-        "commands" => @commands.map { |cmd| cmd.to_h(filter: filter) }
+        "recorded_at" => @recorded_at,
+        "snapshot" => @snapshot&.to_h(filter: filter)
       }
       File.write(@path, record_data.to_yaml)
     end
 
     def reload
-      @commands = []
+      @snapshot = nil
+      @recorded_at = nil
       load_from_file if File.exist?(@path)
     end
 
@@ -65,18 +66,13 @@ module Backspin
     end
 
     def empty?
-      @commands.empty?
-    end
-
-    def size
-      @commands.size
+      @snapshot.nil?
     end
 
     def clear
-      @commands = []
+      @snapshot = nil
+      @recorded_at = nil
     end
-
-    # private
 
     def load_from_file
       data = YAML.load_file(@path.to_s)
@@ -85,13 +81,13 @@ module Backspin
         raise RecordFormatError, "Invalid record format: expected format version #{FORMAT_VERSION}"
       end
 
-      commands = data["commands"]
-      unless commands.is_a?(Array)
-        raise RecordFormatError, "Invalid record format: missing commands"
+      snapshot_data = data["snapshot"]
+      unless snapshot_data.is_a?(Hash)
+        raise RecordFormatError, "Invalid record format: missing snapshot"
       end
 
-      @first_recorded_at = data["first_recorded_at"]
-      @commands = commands.map { |command_data| Command.from_h(command_data) }
+      @recorded_at = data["recorded_at"]
+      @snapshot = Snapshot.from_h(snapshot_data)
     rescue Psych::SyntaxError => e
       raise RecordFormatError, "Invalid record format: #{e.message}"
     end
