@@ -104,12 +104,8 @@ module Backspin
       diff_lines.join("\n")
     end
 
-    def expected_hash
-      @expected_hash
-    end
+    attr_reader :expected_hash
 
-    def actual_hash
-      @actual_hash
-    end
+    attr_reader :actual_hash
   end
 end
