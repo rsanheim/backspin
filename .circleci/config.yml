@@ -20,6 +20,9 @@ jobs:
       - run:
           name: Run specs
           command: bundle exec rake spec
+      - run:
+          name: Run fake gem specs
+          command: bundle exec rake spec:fake_gem
 
   lint:
     resource_class: medium
