@@ -138,6 +138,9 @@ RSpec.describe "Backspin.run" do
 
     expect(result.verified?).to be false
     expect(result.error_message).to include("Output verification failed")
+    expect(result.stdout).to eq("actual\n")
+    expect(result.expected_stdout).to eq("expected\n")
+    expect(result.actual_stdout).to eq("actual\n")
   end
 
   it "requires a command when no block is provided" do

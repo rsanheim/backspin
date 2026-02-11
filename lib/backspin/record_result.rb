@@ -4,16 +4,21 @@ module Backspin
   # Result object for all Backspin record operations
   # Provides a consistent interface whether recording, verifying, or playing back
   class RecordResult
-    attr_reader :output, :commands, :mode, :command_diffs
-    attr_reader :record
+    attr_reader :output, :mode, :command_diffs, :record, :recorded_commands, :actual_commands
 
-    def initialize(output:, mode:, record:, verified: nil, command_diffs: nil)
+    def initialize(output:, mode:, record:, verified: nil, command_diffs: nil, actual_commands: nil)
       @output = output
       @mode = mode
       @record = record
-      @commands = record.commands
+      @recorded_commands = record.commands
+      @actual_commands = actual_commands || []
       @verified = verified
       @command_diffs = command_diffs || []
+    end
+
+    # Backwards-compatible alias for recorded commands.
+    def commands
+      recorded_commands
     end
 
     # @return [Boolean] true if this result is from recording
@@ -29,7 +34,7 @@ module Backspin
     def verified?
       return @verified unless mode == :verify
 
-      return false if command_diffs.size < commands.size
+      return false if command_diffs.size < recorded_commands.size
 
       @verified
     end
@@ -39,8 +44,8 @@ module Backspin
       return nil unless verified? == false
 
       # Check for command count mismatch first
-      if command_diffs.size < commands.size
-        return "Expected #{commands.size} commands but only #{command_diffs.size} were executed"
+      if command_diffs.size < recorded_commands.size
+        return "Expected #{recorded_commands.size} commands but only #{command_diffs.size} were executed"
       end
 
       return "No commands to verify" if command_diffs.empty?
@@ -82,46 +87,72 @@ module Backspin
 
     # @return [String, nil] stdout from the first command
     def stdout
-      commands.first&.result&.stdout
+      output_commands.first&.result&.stdout
     end
 
     # @return [String, nil] stderr from the first command
     def stderr
-      commands.first&.result&.stderr
+      output_commands.first&.result&.stderr
     end
 
     # @return [Integer, nil] exit status from the first command
     def status
-      commands.first&.result&.status
+      output_commands.first&.result&.status
     end
 
     # Multiple command accessors
 
     # @return [Array<String>] stdout from all commands
     def all_stdout
-      commands.map { |cmd| cmd.result.stdout }
+      output_commands.map { |cmd| cmd.result.stdout }
     end
 
     # @return [Array<String>] stderr from all commands
     def all_stderr
-      commands.map { |cmd| cmd.result.stderr }
+      output_commands.map { |cmd| cmd.result.stderr }
     end
 
     # @return [Array<Integer>] exit status from all commands
     def all_status
-      commands.map { |cmd| cmd.result.status }
+      output_commands.map { |cmd| cmd.result.status }
+    end
+
+    # Explicit accessors for the recorded (expected) command output.
+    def expected_stdout
+      recorded_commands.first&.result&.stdout
+    end
+
+    def expected_stderr
+      recorded_commands.first&.result&.stderr
+    end
+
+    def expected_status
+      recorded_commands.first&.result&.status
+    end
+
+    # Explicit accessors for the actual command output from this run.
+    def actual_stdout
+      actual_commands.first&.result&.stdout
+    end
+
+    def actual_stderr
+      actual_commands.first&.result&.stderr
+    end
+
+    def actual_status
+      actual_commands.first&.result&.status
     end
 
     # @return [Boolean] true if this result contains multiple commands
     def multiple_commands?
-      commands.size > 1
+      output_commands.size > 1
     end
 
     # @return [Boolean] true if all commands succeeded (exit status 0)
     def success?
       if multiple_commands?
         # Check all commands - if any command has non-zero status, we're not successful
-        commands.all? { |cmd| cmd.result.status.zero? }
+        output_commands.all? { |cmd| cmd.result.status.zero? }
       else
         status&.zero? || false
       end
@@ -148,6 +179,14 @@ module Backspin
       hash[:failed_commands] = command_diffs.count { |d| !d.verified? } if mode == :verify && command_diffs.any?
 
       hash
+    end
+
+    private
+
+    def output_commands
+      return actual_commands if mode == :verify && actual_commands.any?
+
+      recorded_commands
     end
   end
 end

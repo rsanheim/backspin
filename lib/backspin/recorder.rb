@@ -68,7 +68,8 @@ module Backspin
         mode: :verify,
         verified: command_diff.verified?,
         record: record,
-        command_diffs: [command_diff]
+        command_diffs: [command_diff],
+        actual_commands: [actual_command]
       )
     end
 

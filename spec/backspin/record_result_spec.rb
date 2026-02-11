@@ -66,4 +66,43 @@ RSpec.describe Backspin::RecordResult do
     expect(result.error_message).to include("Command 1:")
     expect(result.error_message).to include("[stdout]")
   end
+
+  it "exposes actual output by default in verify mode while keeping expected output available" do
+    recorded_command = Backspin::Command.new(
+      method_class: Open3::Capture3,
+      args: ["echo", "recorded"],
+      stdout: "recorded\n",
+      stderr: "recorded_err\n",
+      status: 0
+    )
+    actual_command = Backspin::Command.new(
+      method_class: Open3::Capture3,
+      args: ["echo", "actual"],
+      stdout: "actual\n",
+      stderr: "actual_err\n",
+      status: 1
+    )
+
+    record = Backspin::Record.new("record.yml")
+    record.add_command(recorded_command)
+
+    result = described_class.new(
+      output: nil,
+      mode: :verify,
+      record: record,
+      verified: false,
+      command_diffs: [],
+      actual_commands: [actual_command]
+    )
+
+    expect(result.stdout).to eq("actual\n")
+    expect(result.stderr).to eq("actual_err\n")
+    expect(result.status).to eq(1)
+    expect(result.expected_stdout).to eq("recorded\n")
+    expect(result.expected_stderr).to eq("recorded_err\n")
+    expect(result.expected_status).to eq(0)
+    expect(result.actual_stdout).to eq("actual\n")
+    expect(result.actual_stderr).to eq("actual_err\n")
+    expect(result.actual_status).to eq(1)
+  end
 end
