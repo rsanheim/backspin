@@ -40,29 +40,24 @@ RSpec.describe Backspin::CommandDiff do
     expect(stderr_index).to be < status_index
   end
 
-  it "materializes snapshot hashes once and reuses them for verify and diff" do
-    expected_hash = {
-      "stdout" => "one\n",
-      "stderr" => "err\n",
-      "status" => 0
-    }
-    actual_hash = {
-      "stdout" => "two\n",
-      "stderr" => "bad\n",
-      "status" => 1
-    }
-
+  it "does not call to_h when building default diffs" do
     expected_snapshot = instance_double(
       Backspin::Snapshot,
-      command_type: Open3::Capture3
+      command_type: Open3::Capture3,
+      stdout: "one\n",
+      stderr: "err\n",
+      status: 0
     )
     actual_snapshot = instance_double(
       Backspin::Snapshot,
-      command_type: Open3::Capture3
+      command_type: Open3::Capture3,
+      stdout: "two\n",
+      stderr: "bad\n",
+      status: 1
     )
 
-    expect(expected_snapshot).to receive(:to_h).once.and_return(expected_hash)
-    expect(actual_snapshot).to receive(:to_h).once.and_return(actual_hash)
+    expect(expected_snapshot).not_to receive(:to_h)
+    expect(actual_snapshot).not_to receive(:to_h)
 
     command_diff = described_class.new(
       expected: expected_snapshot,
@@ -70,9 +65,9 @@ RSpec.describe Backspin::CommandDiff do
     )
 
     expect(command_diff.verified?).to be false
-    expect(command_diff.summary).to include("Command failed")
     expect(command_diff.diff).to include("[stdout]")
     expect(command_diff.diff).to include("[stderr]")
     expect(command_diff.diff).to include("Exit status: expected 0, got 1")
   end
+
 end

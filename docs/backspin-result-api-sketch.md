@@ -131,7 +131,7 @@ result.expected.stdout
 
 - `matcher:` applies only during verify and compares `expected` vs `actual`.
 - `filter:` applies only when writing snapshots to disk.
-- Verify internals materialize compare hashes once and reuse them for both matcher and diff generation.
+- `Snapshot` serializes once at initialization and returns a frozen hash from `to_h`.
 - Default match still compares stdout/stderr/status only.
 
 ## Error Semantics

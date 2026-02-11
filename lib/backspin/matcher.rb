@@ -5,18 +5,16 @@ module Backspin
   class Matcher
     attr_reader :config, :expected, :actual
 
-    def initialize(config:, expected:, actual:, expected_hash: nil, actual_hash: nil)
+    def initialize(config:, expected:, actual:)
       @config = normalize_config(config)
       @expected = expected
       @actual = actual
-      @expected_hash = expected_hash
-      @actual_hash = actual_hash
     end
 
     # @return [Boolean] true if snapshots match according to configured matcher
     def match?
       if config.nil?
-        default_matcher.call(expected_hash, actual_hash)
+        default_match?
       elsif config.is_a?(Proc)
         config.call(expected_hash, actual_hash)
       elsif config.is_a?(Hash)
@@ -31,16 +29,16 @@ module Backspin
       reasons = []
 
       if config.nil?
-        reasons << "stdout differs" if expected_hash["stdout"] != actual_hash["stdout"]
-        reasons << "stderr differs" if expected_hash["stderr"] != actual_hash["stderr"]
-        reasons << "exit status differs" if expected_hash["status"] != actual_hash["status"]
+        reasons << "stdout differs" if expected.stdout != actual.stdout
+        reasons << "stderr differs" if expected.stderr != actual.stderr
+        reasons << "exit status differs" if expected.status != actual.status
       elsif config.is_a?(Hash)
         config.each do |field, matcher_proc|
           case field
           when :all
             reasons << ":all matcher failed" unless matcher_proc.call(expected_hash, actual_hash)
           when :stdout, :stderr, :status
-            unless matcher_proc.call(expected_hash[field.to_s], actual_hash[field.to_s])
+            unless matcher_proc.call(expected.public_send(field), actual.public_send(field))
               reasons << "#{field} custom matcher failed"
             end
           end
@@ -77,7 +75,7 @@ module Backspin
         when :all
           matcher_proc.call(expected_hash, actual_hash)
         when :stdout, :stderr, :status
-          matcher_proc.call(expected_hash[field.to_s], actual_hash[field.to_s])
+          matcher_proc.call(expected.public_send(field), actual.public_send(field))
         else
           raise ArgumentError, "Unknown field: #{field}"
         end
@@ -86,12 +84,10 @@ module Backspin
       results.all?
     end
 
-    def default_matcher
-      @default_matcher ||= lambda do |recorded, actual|
-        recorded["stdout"] == actual["stdout"] &&
-          recorded["stderr"] == actual["stderr"] &&
-          recorded["status"] == actual["status"]
-      end
+    def default_match?
+      expected.stdout == actual.stdout &&
+        expected.stderr == actual.stderr &&
+        expected.status == actual.status
     end
 
     def expected_hash

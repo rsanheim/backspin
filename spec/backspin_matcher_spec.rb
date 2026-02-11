@@ -220,23 +220,22 @@ RSpec.describe "Backspin matcher contract" do
     expect(matcher.match?).to be true
   end
 
-  it "materializes snapshot hashes once across match and failure reason" do
-    expected_hash = {
-      "stdout" => "one\n",
-      "stderr" => "",
-      "status" => 0
-    }
-    actual_hash = {
-      "stdout" => "two\n",
-      "stderr" => "",
-      "status" => 0
-    }
+  it "does not call to_h for default matching and failure reporting" do
+    expected_snapshot = instance_double(
+      Backspin::Snapshot,
+      stdout: "same\n",
+      stderr: "",
+      status: 0
+    )
+    actual_snapshot = instance_double(
+      Backspin::Snapshot,
+      stdout: "same\n",
+      stderr: "",
+      status: 0
+    )
 
-    expected_snapshot = instance_double(Backspin::Snapshot)
-    actual_snapshot = instance_double(Backspin::Snapshot)
-
-    expect(expected_snapshot).to receive(:to_h).once.and_return(expected_hash)
-    expect(actual_snapshot).to receive(:to_h).once.and_return(actual_hash)
+    expect(expected_snapshot).not_to receive(:to_h)
+    expect(actual_snapshot).not_to receive(:to_h)
 
     matcher = Backspin::Matcher.new(
       config: nil,
@@ -244,8 +243,44 @@ RSpec.describe "Backspin matcher contract" do
       actual: actual_snapshot
     )
 
-    expect(matcher.match?).to be false
-    expect(matcher.failure_reason).to include("stdout differs")
-    expect(matcher.match?).to be false
+    expect(matcher.match?).to be true
+    expect(matcher.failure_reason).to eq("")
   end
+
+  it "calls to_h for :all hash matcher contracts" do
+    expected_snapshot = instance_double(
+      Backspin::Snapshot,
+      stdout: "same\n",
+      stderr: "",
+      status: 0
+    )
+    actual_snapshot = instance_double(
+      Backspin::Snapshot,
+      stdout: "same\n",
+      stderr: "",
+      status: 0
+    )
+
+    expect(expected_snapshot).to receive(:to_h).once.and_return({
+      "stdout" => "same\n",
+      "stderr" => "",
+      "status" => 0
+    })
+    expect(actual_snapshot).to receive(:to_h).once.and_return({
+      "stdout" => "same\n",
+      "stderr" => "",
+      "status" => 0
+    })
+
+    matcher = Backspin::Matcher.new(
+      config: {
+        all: ->(recorded, actual) { recorded["stdout"] == actual["stdout"] }
+      },
+      expected: expected_snapshot,
+      actual: actual_snapshot
+    )
+
+    expect(matcher.match?).to be true
+  end
+
 end

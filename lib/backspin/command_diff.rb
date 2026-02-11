@@ -8,14 +8,10 @@ module Backspin
     def initialize(expected:, actual:, matcher: nil)
       @expected = expected
       @actual = actual
-      @expected_hash = expected.to_h
-      @actual_hash = actual.to_h
       @matcher = Matcher.new(
         config: matcher,
         expected: expected,
-        actual: actual,
-        expected_hash: @expected_hash,
-        actual_hash: @actual_hash
+        actual: actual
       )
       @verified = nil
     end
@@ -38,16 +34,16 @@ module Backspin
         parts << "Command type mismatch: expected #{expected.command_type.name}, got #{actual.command_type.name}"
       end
 
-      if expected_hash["stdout"] != actual_hash["stdout"]
-        parts << stdout_diff(expected_hash["stdout"], actual_hash["stdout"])
+      if expected.stdout != actual.stdout
+        parts << stdout_diff(expected.stdout, actual.stdout)
       end
 
-      if expected_hash["stderr"] != actual_hash["stderr"]
-        parts << stderr_diff(expected_hash["stderr"], actual_hash["stderr"])
+      if expected.stderr != actual.stderr
+        parts << stderr_diff(expected.stderr, actual.stderr)
       end
 
-      if expected_hash["status"] != actual_hash["status"]
-        parts << "Exit status: expected #{expected_hash["status"]}, got #{actual_hash["status"]}"
+      if expected.status != actual.status
+        parts << "Exit status: expected #{expected.status}, got #{actual.status}"
       end
 
       parts.join("\n\n")
@@ -104,8 +100,5 @@ module Backspin
       diff_lines.join("\n")
     end
 
-    attr_reader :expected_hash
-
-    attr_reader :actual_hash
   end
 end

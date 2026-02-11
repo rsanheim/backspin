@@ -41,4 +41,20 @@ RSpec.describe "Backspin record filters" do
     expect(snapshot["stdout"]).to eq("filtered\n")
     expect(snapshot["stderr"]).to eq("filtered_err\n")
   end
+
+  it "applies filters to a mutable copy and keeps snapshot serialization immutable" do
+    result = Backspin.run(["echo", "hello"], name: "filter_copy", filter: lambda { |data|
+      data["stdout"].gsub!("hello", "filtered")
+      data["args"] << "extra"
+      data
+    })
+
+    expect(result.actual.to_h["stdout"]).to eq("hello\n")
+    expect(result.actual.to_h["args"]).to eq(["echo", "hello"])
+
+    record_path = Backspin.configuration.backspin_dir.join("filter_copy.yml")
+    record_data = YAML.load_file(record_path)
+    expect(record_data["snapshot"]["stdout"]).to eq("filtered\n")
+    expect(record_data["snapshot"]["args"]).to eq(["echo", "hello", "extra"])
+  end
 end

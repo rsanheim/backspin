@@ -47,10 +47,12 @@ module Backspin
 
     def save(filter: nil)
       FileUtils.mkdir_p(File.dirname(@path))
+      snapshot_data = @snapshot&.to_h
+      snapshot_data = filter.call(deep_dup(snapshot_data)) if snapshot_data && filter
       record_data = {
         "format_version" => FORMAT_VERSION,
         "recorded_at" => @recorded_at,
-        "snapshot" => @snapshot&.to_h(filter: filter)
+        "snapshot" => snapshot_data
       }
       File.write(@path, record_data.to_yaml)
     end
@@ -90,6 +92,21 @@ module Backspin
       @snapshot = Snapshot.from_h(snapshot_data)
     rescue Psych::SyntaxError => e
       raise RecordFormatError, "Invalid record format: #{e.message}"
+    end
+
+    private
+
+    def deep_dup(value)
+      case value
+      when Hash
+        value.transform_values { |entry| deep_dup(entry) }
+      when Array
+        value.map { |entry| deep_dup(entry) }
+      when String
+        value.dup
+      else
+        value
+      end
     end
   end
 end
