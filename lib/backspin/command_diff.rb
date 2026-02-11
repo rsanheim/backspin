@@ -5,13 +5,15 @@ module Backspin
   class CommandDiff
     attr_reader :expected, :actual, :matcher
 
-    def initialize(expected:, actual:, matcher: nil)
+    def initialize(expected:, actual:, matcher: nil, filter: nil, filter_on: :both)
       @expected = expected
       @actual = actual
+      @expected_compare = build_comparison_snapshot(expected, filter: filter, filter_on: filter_on)
+      @actual_compare = build_comparison_snapshot(actual, filter: filter, filter_on: filter_on)
       @matcher = Matcher.new(
         config: matcher,
-        expected: expected,
-        actual: actual
+        expected: @expected_compare,
+        actual: @actual_compare
       )
       @verified = nil
     end
@@ -34,16 +36,16 @@ module Backspin
         parts << "Command type mismatch: expected #{expected.command_type.name}, got #{actual.command_type.name}"
       end
 
-      if expected.stdout != actual.stdout
-        parts << stdout_diff(expected.stdout, actual.stdout)
+      if expected_compare.stdout != actual_compare.stdout
+        parts << stdout_diff(expected_compare.stdout, actual_compare.stdout)
       end
 
-      if expected.stderr != actual.stderr
-        parts << stderr_diff(expected.stderr, actual.stderr)
+      if expected_compare.stderr != actual_compare.stderr
+        parts << stderr_diff(expected_compare.stderr, actual_compare.stderr)
       end
 
-      if expected.status != actual.status
-        parts << "Exit status: expected #{expected.status}, got #{actual.status}"
+      if expected_compare.status != actual_compare.status
+        parts << "Exit status: expected #{expected_compare.status}, got #{actual_compare.status}"
       end
 
       parts.join("\n\n")
@@ -98,6 +100,65 @@ module Backspin
       end
 
       diff_lines.join("\n")
+    end
+
+    def expected_compare
+      @expected_compare
+    end
+
+    def actual_compare
+      @actual_compare
+    end
+
+    def build_comparison_snapshot(snapshot, filter:, filter_on:)
+      data = deep_dup(snapshot.to_h)
+      if filter && filter_on == :both
+        data = filter.call(data)
+      end
+
+      ComparisonSnapshot.new(
+        command_type: snapshot.command_type,
+        data: deep_freeze(data)
+      )
+    end
+
+    def deep_dup(value)
+      case value
+      when Hash
+        value.transform_values { |entry| deep_dup(entry) }
+      when Array
+        value.map { |entry| deep_dup(entry) }
+      when String
+        value.dup
+      else
+        value
+      end
+    end
+
+    def deep_freeze(value)
+      case value
+      when Hash
+        value.each_value { |entry| deep_freeze(entry) }
+      when Array
+        value.each { |entry| deep_freeze(entry) }
+      end
+      value.freeze
+    end
+
+    class ComparisonSnapshot
+      attr_reader :command_type, :stdout, :stderr, :status
+
+      def initialize(command_type:, data:)
+        @command_type = command_type
+        @data = data
+        @stdout = data["stdout"]
+        @stderr = data["stderr"]
+        @status = data["status"]
+      end
+
+      def to_h
+        @data
+      end
     end
 
   end

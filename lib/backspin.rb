@@ -71,19 +71,30 @@ module Backspin
     # @param env [Hash] Environment variables to pass to Open3.capture3
     # @param mode [Symbol] Recording mode - :auto, :record, :verify
     # @param matcher [Proc, Hash] Custom matcher for verification
-    # @param filter [Proc] Custom filter for recorded data
+    # @param filter [Proc] Custom filter for recorded data/canonicalization
+    # @param filter_on [Symbol] Filter application mode - :both (default), :record
     # @return [BackspinResult] Aggregate result for this run
-    def run(command = nil, name:, env: nil, mode: :auto, matcher: nil, filter: nil, &block)
+    def run(command = nil, name:, env: nil, mode: :auto, matcher: nil, filter: nil, filter_on: :both, &block)
+      validate_filter_on!(filter_on)
+
       if block_given?
         raise ArgumentError, "command must be omitted when using a block" unless command.nil?
         raise ArgumentError, "env is not supported when using a block" unless env.nil?
 
-        return perform_capture(name, mode: mode, matcher: matcher, filter: filter, &block)
+        return perform_capture(name, mode: mode, matcher: matcher, filter: filter, filter_on: filter_on, &block)
       end
 
       raise ArgumentError, "command is required" if command.nil?
 
-      perform_command_run(command, name: name, env: env, mode: mode, matcher: matcher, filter: filter)
+      perform_command_run(
+        command,
+        name: name,
+        env: env,
+        mode: mode,
+        matcher: matcher,
+        filter: filter,
+        filter_on: filter_on
+      )
     end
 
     # Captures all stdout/stderr output from a block
@@ -91,18 +102,20 @@ module Backspin
     # @param record_name [String] Name for the record file
     # @param mode [Symbol] Recording mode - :auto, :record, :verify
     # @param matcher [Proc, Hash] Custom matcher for verification
-    # @param filter [Proc] Custom filter for recorded data
+    # @param filter [Proc] Custom filter for recorded data/canonicalization
+    # @param filter_on [Symbol] Filter application mode - :both (default), :record
     # @return [BackspinResult] Aggregate result for this run
-    def capture(record_name, mode: :auto, matcher: nil, filter: nil, &block)
+    def capture(record_name, mode: :auto, matcher: nil, filter: nil, filter_on: :both, &block)
       raise ArgumentError, "record_name is required" if record_name.nil? || record_name.empty?
       raise ArgumentError, "block is required" unless block_given?
+      validate_filter_on!(filter_on)
 
-      perform_capture(record_name, mode: mode, matcher: matcher, filter: filter, &block)
+      perform_capture(record_name, mode: mode, matcher: matcher, filter: filter, filter_on: filter_on, &block)
     end
 
     private
 
-    def perform_capture(record_name, mode:, matcher:, filter:, &block)
+    def perform_capture(record_name, mode:, matcher:, filter:, filter_on:, &block)
       record_path = Record.build_record_path(record_name)
       mode = determine_mode(mode, record_path)
       validate_mode!(mode)
@@ -113,7 +126,7 @@ module Backspin
         Record.load_or_create(record_path)
       end
 
-      recorder = Recorder.new(record: record, mode: mode, matcher: matcher, filter: filter)
+      recorder = Recorder.new(record: record, mode: mode, matcher: matcher, filter: filter, filter_on: filter_on)
 
       result = case mode
       when :record
@@ -129,7 +142,7 @@ module Backspin
       result
     end
 
-    def perform_command_run(command, name:, env:, mode:, matcher:, filter:)
+    def perform_command_run(command, name:, env:, mode:, matcher:, filter:, filter_on:)
       record_path = Record.build_record_path(name)
       mode = determine_mode(mode, record_path)
       validate_mode!(mode)
@@ -180,7 +193,13 @@ module Backspin
           stderr: stderr,
           status: status.exitstatus
         )
-        command_diff = CommandDiff.new(expected: expected_snapshot, actual: actual_snapshot, matcher: matcher)
+        command_diff = CommandDiff.new(
+          expected: expected_snapshot,
+          actual: actual_snapshot,
+          matcher: matcher,
+          filter: filter,
+          filter_on: filter_on
+        )
         BackspinResult.new(
           mode: :verify,
           record_path: record.path,
@@ -241,6 +260,12 @@ module Backspin
       raise ArgumentError, "Playback mode is not supported" if mode == :playback
 
       raise ArgumentError, "Unknown mode: #{mode}"
+    end
+
+    def validate_filter_on!(filter_on)
+      return if %i[both record].include?(filter_on)
+
+      raise ArgumentError, "Unknown filter_on: #{filter_on}. Must be :both or :record"
     end
   end
 end

@@ -77,6 +77,9 @@ The `:all` matcher receives full hashes with these keys:
 - `"env"` - Optional Hash of env vars (command runs only)
 - `"recorded_at"` - Timestamp string
 
+Matcher inputs are copies of comparison data so in-place mutation inside matcher callbacks
+does not mutate Backspin's stored snapshots.
+
 ## Examples
 
 ### Matching Version Numbers

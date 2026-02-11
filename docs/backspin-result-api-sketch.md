@@ -15,8 +15,8 @@ Branch: `spike-backspin-result-api`
 ### Entry points
 
 ```ruby
-Backspin.run(command = nil, name:, env: nil, mode: :auto, matcher: nil, filter: nil, &block)
-Backspin.capture(name, mode: :auto, matcher: nil, filter: nil, &block)
+Backspin.run(command = nil, name:, env: nil, mode: :auto, matcher: nil, filter: nil, filter_on: :both, &block)
+Backspin.capture(name, mode: :auto, matcher: nil, filter: nil, filter_on: :both, &block)
 ```
 
 Both return `BackspinResult`.
@@ -130,7 +130,8 @@ result.expected.stdout
 ## Matcher and Filter Semantics
 
 - `matcher:` applies only during verify and compares `expected` vs `actual`.
-- `filter:` applies only when writing snapshots to disk.
+- `filter:` applies during record writes, and during verify when `filter_on: :both`.
+- `filter_on:` supports `:both` (default) and `:record`.
 - `Snapshot` serializes once at initialization and returns a frozen hash from `to_h`.
 - Default match still compares stdout/stderr/status only.
 

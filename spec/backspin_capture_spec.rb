@@ -162,4 +162,10 @@ RSpec.describe "Backspin.capture" do
       expect(error.message).to include("Output verification failed")
     end
   end
+
+  it "rejects unknown filter_on values" do
+    expect do
+      Backspin.capture("capture_bad_filter_on", filter_on: :verify) { puts "hi" }
+    end.to raise_error(ArgumentError, /Unknown filter_on/)
+  end
 end

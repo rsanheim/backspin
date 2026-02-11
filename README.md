@@ -132,6 +132,31 @@ result = Backspin.run(["date"], name: "timestamp_test", matcher: {stdout: timest
 
 For more matcher examples and detailed documentation, see [MATCHERS.md](MATCHERS.md).
 
+### Filters and Canonicalization
+
+Use `filter:` to normalize snapshot data (timestamps, random IDs, absolute paths).
+
+By default (`filter_on: :both`), Backspin applies `filter`:
+- when writing record snapshots
+- during verify for both expected and actual, before matcher and diff
+
+If you only want record-time filtering, use `filter_on: :record`.
+
+```ruby
+normalize_filter = ->(snapshot) do
+  snapshot.merge(
+    "stdout" => snapshot["stdout"].gsub(/id=\d+/, "id=[ID]")
+  )
+end
+
+# default: filter_on :both
+Backspin.run(["echo", "id=123"], name: "canonicalized", filter: normalize_filter)
+Backspin.run(["echo", "id=999"], name: "canonicalized", filter: normalize_filter) # verifies
+
+# record-only filtering
+Backspin.run(["echo", "id=123"], name: "record_only", filter: normalize_filter, filter_on: :record)
+```
+
 ### Working with the Result Object
 
 The API returns a `Backspin::BackspinResult` object with helpful methods:
