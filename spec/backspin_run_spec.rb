@@ -268,7 +268,7 @@ RSpec.describe "Backspin.run" do
 
   it "composes a verification error with field summary, context lines, and separators" do
     expected_output = (1..15).map { |i| "line #{i}" }.join("\n")
-    actual_output = (1..15).map { |i| i == 8 ? "CHANGED" : "line #{i}" }.join("\n")
+    actual_output = (1..15).map { |i| (i == 8) ? "CHANGED" : "line #{i}" }.join("\n")
 
     Backspin.run(["printf", expected_output], name: "full_error_shape", mode: :record)
 
