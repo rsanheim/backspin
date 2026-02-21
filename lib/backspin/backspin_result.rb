@@ -36,10 +36,18 @@ module Backspin
       return nil unless verified? == false
       return "Output verification failed" unless @command_diff
 
-      msg = "Output verification failed:\n\n"
-      msg += @command_diff.summary
-      msg += "\n#{@command_diff.diff}" if @command_diff.diff
-      msg
+      parts = ["Summary:"]
+      @command_diff.field_summary.each do |line|
+        parts << "  #{line}"
+      end
+
+      diff = @command_diff.diff
+      if diff && !diff.empty?
+        parts << ""
+        parts << diff
+      end
+
+      parts.join("\n")
     end
 
     def success?

@@ -152,7 +152,8 @@ RSpec.describe "Backspin.run" do
     result = Backspin.run(["echo", "actual"], name: "config_no_raise")
 
     expect(result.verified?).to be false
-    expect(result.error_message).to include("Output verification failed")
+    expect(result.error_message).to include("Summary:")
+    expect(result.error_message).to include("stdout: changed")
     expect(result.actual.stdout).to eq("actual\n")
     expect(result.expected.stdout).to eq("expected\n")
   end
@@ -263,5 +264,44 @@ RSpec.describe "Backspin.run" do
     expect do
       Backspin.run(["echo", "hi"], name: "bad_filter_on", filter_on: :verify)
     end.to raise_error(ArgumentError, /Unknown filter_on/)
+  end
+
+  it "composes a verification error with field summary, context lines, and separators" do
+    expected_output = (1..15).map { |i| "line #{i}" }.join("\n")
+    actual_output = (1..15).map { |i| i == 8 ? "CHANGED" : "line #{i}" }.join("\n")
+
+    Backspin.run(["printf", expected_output], name: "full_error_shape", mode: :record)
+
+    expect do
+      Backspin.run(["printf", actual_output], name: "full_error_shape")
+    end.to raise_error(Backspin::VerificationError) do |error|
+      lines = error.message.lines.map(&:chomp)
+
+      # Header
+      expect(lines[0]).to eq("Backspin verification failed!")
+      expect(lines[1]).to start_with("Record:")
+
+      # Field summary section
+      expect(lines).to include("Summary:")
+      expect(lines).to include("  stdout: changed")
+      expect(lines).to include("  stderr: unchanged")
+      expect(lines).to include("  status: unchanged")
+
+      # Diff section header followed by context + change + context
+      stdout_idx = lines.index("[stdout]")
+      diff_body = lines[(stdout_idx + 1)..]
+
+      expect(diff_body).to eq([
+        " line 5",
+        " line 6",
+        " line 7",
+        "-line 8",
+        "+CHANGED",
+        " line 9",
+        " line 10",
+        " line 11",
+        "..."
+      ])
+    end
   end
 end
