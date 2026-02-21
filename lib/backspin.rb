@@ -159,7 +159,7 @@ module Backspin
           stdout: stdout,
           stderr: stderr,
           status: status.exitstatus,
-          recorded_at: Time.now.iso8601
+          recorded_at: Time.now.utc.iso8601
         )
         record.set_snapshot(actual_snapshot)
         record.save(filter: filter)

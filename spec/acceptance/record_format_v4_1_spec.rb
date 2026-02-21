@@ -119,6 +119,30 @@ RSpec.describe "Record format v4.1" do
     expect(unchanged_record["format_version"]).to eq("4.0")
   end
 
+  it "stores run timestamps in UTC" do
+    Backspin.run(["echo", "utc check"], name: "run_utc_timestamps")
+
+    record_path = Backspin.configuration.backspin_dir.join("run_utc_timestamps.yml")
+    record_data = YAML.load_file(record_path)
+
+    expect(record_data["first_recorded_at"]).to end_with("Z")
+    expect(record_data["recorded_at"]).to end_with("Z")
+    expect(record_data["snapshot"]["recorded_at"]).to end_with("Z")
+  end
+
+  it "stores capture timestamps in UTC" do
+    Backspin.capture("capture_utc_timestamps") do
+      puts "utc check"
+    end
+
+    record_path = Backspin.configuration.backspin_dir.join("capture_utc_timestamps.yml")
+    record_data = YAML.load_file(record_path)
+
+    expect(record_data["first_recorded_at"]).to end_with("Z")
+    expect(record_data["recorded_at"]).to end_with("Z")
+    expect(record_data["snapshot"]["recorded_at"]).to end_with("Z")
+  end
+
   it "upgrades a 4.0 record to v4.1 metadata on re-record" do
     record_path = Backspin.configuration.backspin_dir.join("upgrade_from_v4_0.yml")
     FileUtils.mkdir_p(File.dirname(record_path))
