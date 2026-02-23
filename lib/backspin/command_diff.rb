@@ -120,8 +120,8 @@ module Backspin
     end
 
     def generate_line_diff(expected, actual)
-      expected_lines = (expected || "").lines.map(&:chomp)
-      actual_lines = (actual || "").lines.map(&:chomp)
+      expected_lines = split_lines(expected)
+      actual_lines = split_lines(actual)
       max_lines = [expected_lines.length, actual_lines.length].max
 
       changed = Array.new(max_lines, false)
@@ -152,15 +152,23 @@ module Backspin
         in_hunk = true
 
         if changed[i]
-          diff_lines << "-#{expected_lines[i]}" if i < expected_lines.length
-          diff_lines << "+#{actual_lines[i]}" if i < actual_lines.length
+          diff_lines << "-#{render_line(expected_lines[i])}" if i < expected_lines.length
+          diff_lines << "+#{render_line(actual_lines[i])}" if i < actual_lines.length
         else
           line = expected_lines[i] || actual_lines[i]
-          diff_lines << " #{line}"
+          diff_lines << " #{render_line(line)}"
         end
       end
 
       diff_lines.join("\n")
+    end
+
+    def split_lines(value)
+      (value || "").lines
+    end
+
+    def render_line(line)
+      line.to_s.chomp
     end
 
     def maybe_truncate(diff_text)

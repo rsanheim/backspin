@@ -210,6 +210,32 @@ RSpec.describe Backspin::CommandDiff do
       expect(diff).to include("-line 18")
       expect(diff).to include("+CHANGED 18")
     end
+
+    it "shows line entries for newline-only changes" do
+      expected_snapshot = Backspin::Snapshot.new(
+        command_type: Open3::Capture3,
+        args: ["test"],
+        stdout: "line with newline\n",
+        stderr: "",
+        status: 0
+      )
+      actual_snapshot = Backspin::Snapshot.new(
+        command_type: Open3::Capture3,
+        args: ["test"],
+        stdout: "line with newline",
+        stderr: "",
+        status: 0
+      )
+
+      diff = described_class.new(
+        expected: expected_snapshot,
+        actual: actual_snapshot
+      ).diff
+
+      expect(diff).to include("[stdout]")
+      expect(diff).to include("-line with newline")
+      expect(diff).to include("+line with newline")
+    end
   end
 
   context "diff truncation" do
