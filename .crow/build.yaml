@@ -1,0 +1,6 @@
+steps:
+  - name: test
+    image: alpine
+    commands:
+      - echo "Hello from Crow CI!"
+      - echo "${CI_REPO}"
