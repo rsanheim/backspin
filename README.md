@@ -211,7 +211,7 @@ Backspin.run(["echo", "id=123"], name: "record_only", filter: normalize_filter, 
 
 ### Working with the Result Object
 
-The API returns a `Backspin::BackspinResult` object with helpful methods:
+The API returns a `Backspin::BackspinResult` object with details on run.
 
 ```ruby
 result = Backspin.run(["sh", "-c", "echo out; echo err >&2; exit 42"], name: "my_test")
