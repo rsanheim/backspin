@@ -1,7 +1,7 @@
 PATH
   remote: ../../..
   specs:
-    backspin (0.11.0)
+    backspin (0.12.0)
       logger
 
 PATH
@@ -40,7 +40,7 @@ DEPENDENCIES
   rspec (~> 3)
 
 CHECKSUMS
-  backspin (0.11.0)
+  backspin (0.12.0)
   diff-lcs (1.6.2) sha256=9ae0d2cba7d4df3075fe8cd8602a8604993efc0dfa934cff568969efb1909962
   dummy_cli_gem (0.1.0)
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
