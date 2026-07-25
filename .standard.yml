@@ -5,7 +5,7 @@ format: progress
 # Match the gemspec's required_ruby_version. Without this, Standard infers the
 # target from .ruby-version (4) and flags requires that are only redundant on
 # Ruby >= 3.5 - removing them would break the 3.x versions we still support.
-ruby_version: 3.1
+ruby_version: 3.2
 
 ignore:
   - 'tmp/**/*'
