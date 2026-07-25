@@ -75,6 +75,25 @@ end
 
 Block capture records a single combined stdout/stderr snapshot. Exit status is a placeholder (`0`) in this mode.
 
+### Differential Testing (Compare)
+
+Use `Backspin.compare` when the question is "does my tool produce the same output as this reference tool?" Both commands run live and their output is compared directly - nothing is recorded to disk:
+
+```ruby
+result = Backspin.compare(
+  reference: ["bundle", "exec", "rspec", "spec/failing_spec.rb"],
+  actual: ["my-runner", "spec/failing_spec.rb"]
+)
+
+result.expected.stdout  # reference output
+result.actual.stdout    # output from the command under test
+result.verified?        # true when they match
+```
+
+Only stdout, stderr, and exit status are compared, so the two commands can differ in argv and environment without any normalization. `filter` and `matcher` work exactly as they do for `Backspin.run`, and a mismatch raises `Backspin::VerificationError` unless `raise_on_verification_failure` is disabled.
+
+If the reference command produces no output at all - usually a sign it failed to start rather than that its output is genuinely empty - `compare` raises `Backspin::ReferenceCommandError` instead of comparing empty to empty.
+
 ### Recording Modes
 
 Backspin supports different modes for controlling how commands are recorded and verified:

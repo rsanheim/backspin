@@ -1,6 +1,8 @@
 # Changelog
 
 ## 0.12.0
+* Added `Backspin.compare(reference:, actual:)` for differential testing - runs both commands live and compares their filtered output, with no record file. Only stdout, stderr, and exit status are compared, so the two commands may differ in argv and env without normalization.
+* Added `Backspin::ReferenceCommandError`, raised when a compare's reference command produces no output at all (usually a sign it failed to start), rather than comparing empty to empty.
 * Added `BACKSPIN_MODE` environment variable to globally override recording mode (`auto`, `record`, `verify`).
 * Explicit `mode:` kwarg still takes highest precedence, followed by the env var, then auto-detection.
 * Added configurable logger to `Backspin::Configuration` (defaults to WARN level, logfmt-lite format, and can be disabled with `config.logger = nil`).

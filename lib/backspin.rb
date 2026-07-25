@@ -4,6 +4,7 @@ require "yaml"
 require "fileutils"
 require "open3"
 require "pathname"
+require "time"
 require "backspin/version"
 require "backspin/configuration"
 require "backspin/snapshot"
@@ -17,6 +18,10 @@ module Backspin
   VALID_MODES = %i[auto record verify].freeze
 
   class RecordNotFoundError < StandardError; end
+
+  # Raised when the reference command in a compare produced no output at all,
+  # which almost always means it failed to run rather than that it is correct.
+  class ReferenceCommandError < StandardError; end
 
   class VerificationError < StandardError
     attr_reader :result
@@ -115,6 +120,49 @@ module Backspin
       perform_capture(record_name, mode: mode, matcher: matcher, filter: filter, filter_on: filter_on, &block)
     end
 
+    # Differential testing - runs a reference command and a command under test
+    # and compares their filtered output. Nothing is recorded to disk.
+    #
+    # Only stdout, stderr, and status are compared, so the two commands may
+    # differ in argv and env without any normalization.
+    #
+    # @param reference [String, Array] Command that defines the correct output
+    # @param actual [String, Array] Command under test
+    # @param env [Hash] Environment variables passed to both commands
+    # @param matcher [Proc, Hash] Custom matcher for verification
+    # @param filter [Proc] Custom filter applied to both sides before comparing
+    # @return [BackspinResult] expected = reference, actual = command under test
+    def compare(reference:, actual:, env: nil, matcher: nil, filter: nil)
+      normalized_env = normalize_env(env)
+
+      expected_snapshot, = capture_command_snapshot(reference, normalized_env)
+      if expected_snapshot.stdout.empty? && expected_snapshot.stderr.empty?
+        raise ReferenceCommandError,
+          "Reference command produced no output (exit status #{expected_snapshot.status}): #{reference.inspect}"
+      end
+
+      actual_snapshot, = capture_command_snapshot(actual, normalized_env)
+
+      command_diff = CommandDiff.new(
+        expected: expected_snapshot,
+        actual: actual_snapshot,
+        matcher: matcher,
+        filter: filter
+      )
+      result = BackspinResult.new(
+        mode: :verify,
+        record_path: nil,
+        actual: actual_snapshot,
+        expected: expected_snapshot,
+        verified: command_diff.verified?,
+        command_diff: command_diff
+      )
+
+      raise_on_verification_failure!(result)
+
+      result
+    end
+
     private
 
     def perform_capture(record_name, mode:, matcher:, filter:, filter_on:, &block)
@@ -147,27 +195,18 @@ module Backspin
 
       record = Record.load_or_create(record_path)
 
-      normalized_env = env.nil? ? nil : normalize_env(env)
+      normalized_env = normalize_env(env)
 
       result = case mode
       when :record
-        stdout, stderr, status = execute_command(command, normalized_env)
-        actual_snapshot = Snapshot.new(
-          command_type: Open3::Capture3,
-          args: command,
-          env: normalized_env,
-          stdout: stdout,
-          stderr: stderr,
-          status: status.exitstatus,
-          recorded_at: Time.now.utc.iso8601
-        )
+        actual_snapshot, output = capture_command_snapshot(command, normalized_env)
         record.set_snapshot(actual_snapshot)
         record.save(filter: filter)
         BackspinResult.new(
           mode: :record,
           record_path: record.path,
           actual: actual_snapshot,
-          output: [stdout, stderr, status]
+          output: output
         )
       when :verify
         raise RecordNotFoundError, "Record not found: #{record.path}" unless record.exists?
@@ -178,15 +217,7 @@ module Backspin
           raise RecordFormatError, "Invalid record format: expected Open3::Capture3 for run"
         end
 
-        stdout, stderr, status = execute_command(command, normalized_env)
-        actual_snapshot = Snapshot.new(
-          command_type: Open3::Capture3,
-          args: command,
-          env: normalized_env,
-          stdout: stdout,
-          stderr: stderr,
-          status: status.exitstatus
-        )
+        actual_snapshot, output = capture_command_snapshot(command, normalized_env)
         command_diff = CommandDiff.new(
           expected: expected_snapshot,
           actual: actual_snapshot,
@@ -201,7 +232,7 @@ module Backspin
           expected: expected_snapshot,
           verified: command_diff.verified?,
           command_diff: command_diff,
-          output: [stdout, stderr, status]
+          output: output
         )
       else
         raise ArgumentError, "Unknown mode: #{mode}"
@@ -212,7 +243,22 @@ module Backspin
       result
     end
 
+    def capture_command_snapshot(command, env)
+      stdout, stderr, status = execute_command(command, env)
+      snapshot = Snapshot.new(
+        command_type: Open3::Capture3,
+        args: command,
+        env: env,
+        stdout: stdout,
+        stderr: stderr,
+        status: status.exitstatus,
+        recorded_at: Time.now.utc.iso8601
+      )
+      [snapshot, [stdout, stderr, status]]
+    end
+
     def normalize_env(env)
+      return nil if env.nil?
       raise ArgumentError, "env must be a Hash" unless env.is_a?(Hash)
 
       env.empty? ? nil : env
@@ -234,7 +280,7 @@ module Backspin
       return unless configuration.raise_on_verification_failure && result.verified? == false
 
       error_message = "Backspin verification failed!\n"
-      error_message += "Record: #{result.record_path}\n"
+      error_message += "Record: #{result.record_path}\n" if result.record_path
       details = result.error_message || result.diff
       error_message += "\n#{details}" if details
 
