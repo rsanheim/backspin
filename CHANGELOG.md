@@ -1,9 +1,13 @@
 # Changelog
 
-## 0.12.0
-* Raised the minimum supported Ruby to 3.2 (3.1 reached end-of-life in March 2025).
+## 0.13.0
 * Added `Backspin.compare(reference:, actual:)` for differential testing - runs both commands live and compares their filtered output, with no record file. Only stdout, stderr, and exit status are compared, so the two commands may differ in argv and env without normalization.
 * Added `Backspin::ReferenceCommandError`, raised when a compare's reference command produces no output at all (usually a sign it failed to start), rather than comparing empty to empty.
+* Raised the minimum supported Ruby to 3.2 (3.1 reached end-of-life in March 2025).
+* Fixed snapshot timestamps to be recorded as UTC rather than local time, so re-recording in a different timezone no longer produces noisy diffs.
+* Fixed a missing `require "time"`, which could raise `NoMethodError` on `Time#iso8601` in consumers that never load the time stdlib themselves.
+
+## 0.12.0 - 2026-02-11
 * Added `BACKSPIN_MODE` environment variable to globally override recording mode (`auto`, `record`, `verify`).
 * Explicit `mode:` kwarg still takes highest precedence, followed by the env var, then auto-detection.
 * Added configurable logger to `Backspin::Configuration` (defaults to WARN level, logfmt-lite format, and can be disabled with `config.logger = nil`).
