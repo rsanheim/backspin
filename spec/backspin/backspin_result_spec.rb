@@ -52,8 +52,8 @@ RSpec.describe Backspin::BackspinResult do
       command_diff: command_diff
     )
 
-    expect(result.error_message).to include("Output verification failed:")
-    expect(result.error_message).to include("Command failed")
+    expect(result.error_message).to include("Summary:")
+    expect(result.error_message).to include("stdout: changed")
     expect(result.error_message).to include("[stdout]")
   end
 

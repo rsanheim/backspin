@@ -129,7 +129,8 @@ RSpec.describe "Backspin.capture" do
     end
 
     expect(result.verified?).to be false
-    expect(result.error_message).to include("Output verification failed")
+    expect(result.error_message).to include("Summary:")
+    expect(result.error_message).to include("stdout: changed")
     expect(result.actual.stdout).to eq("Different output\n")
     expect(result.expected.stdout).to eq("Expected output\n")
   end
@@ -161,7 +162,8 @@ RSpec.describe "Backspin.capture" do
       end
     end.to raise_error(Backspin::VerificationError) do |error|
       expect(error.message).to include("Backspin verification failed!")
-      expect(error.message).to include("Output verification failed")
+      expect(error.message).to include("Summary:")
+      expect(error.message).to include("stdout: changed")
     end
   end
 
