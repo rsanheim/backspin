@@ -21,7 +21,10 @@ jobs:
           name: Run specs with Plur
           command: |
             set -euo pipefail
-            curl -fsSL https://mise.run | sh
+            mkdir -p tmp
+            curl -fsSL https://github.com/jdx/mise/releases/download/v2026.9.15/install.sh -o tmp/mise-install.sh
+            echo 'f4fbd60b2a68e6fd6a140ad5a36ac7acd4d74336123e614548f03083aa9c6bf4  tmp/mise-install.sh' | sha256sum -c -
+            MISE_VERSION=v2026.9.15 sh tmp/mise-install.sh
             export PATH="$HOME/.local/bin:$PATH"
             mise trust
             mise upgrade github:rsanheim/plur
