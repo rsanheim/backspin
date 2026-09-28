@@ -12,14 +12,22 @@ jobs:
       ruby-version:
         type: string
     docker:
-      - image: cimg/ruby:<< parameters.ruby-version >>
+      - image: ghcr.io/jdx/mise:2026.9.15-debian
+    environment:
+      MISE_RUBY_VERSION: << parameters.ruby-version >>
+      MISE_YES: "1"
     steps:
       - checkout
-      - ruby/install-deps:
-          key: gems-v1-ruby<< parameters.ruby-version >>
       - run:
-          name: Run specs
-          command: bundle exec rake spec
+          name: Install project tools
+          command: |
+            apt-get update && apt-get install -y --no-install-recommends build-essential libyaml-dev
+            mise install
+      - ruby/install-deps:
+          key: gems-v2-mise-ruby<< parameters.ruby-version >>
+      - run:
+          name: Run specs with Plur
+          command: plur spec
       - run:
           name: Run fake gem specs
           command: bundle exec rake spec:fake_gem
