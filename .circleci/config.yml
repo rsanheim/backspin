@@ -12,27 +12,22 @@ jobs:
       ruby-version:
         type: string
     docker:
-      - image: cimg/ruby:<< parameters.ruby-version >>
+      - image: ghcr.io/jdx/mise:2026.9.15-debian
+    environment:
+      MISE_RUBY_VERSION: << parameters.ruby-version >>
+      MISE_YES: "1"
     steps:
       - checkout
+      - run:
+          name: Install project tools
+          command: |
+            apt-get update && apt-get install -y --no-install-recommends build-essential libyaml-dev
+            mise install
       - ruby/install-deps:
-          key: gems-v1-ruby<< parameters.ruby-version >>
+          key: gems-v2-mise-ruby<< parameters.ruby-version >>
       - run:
           name: Run specs with Plur
-          command: |
-            set -euo pipefail
-            version=$(sed -n 's/^"github:rsanheim\/plur" = "\([^"]*\)"$/\1/p' mise.toml)
-            test -n "$version"
-            archive="plur_${version}_linux_amd64.tar.gz"
-            mkdir -p tmp/plur-install tmp/bin
-            cd tmp/plur-install
-            curl -fsSLO "https://github.com/rsanheim/plur/releases/download/v${version}/${archive}"
-            curl -fsSLO "https://github.com/rsanheim/plur/releases/download/v${version}/plur_${version}_checksums.txt"
-            awk -v file="$archive" '$2 == file { print }' "plur_${version}_checksums.txt" | sha256sum -c -
-            tar -xzf "$archive"
-            install -m 755 "plur_${version}_linux_amd64/plur" ../bin/plur
-            cd ../..
-            tmp/bin/plur spec
+          command: plur spec
       - run:
           name: Run fake gem specs
           command: bundle exec rake spec:fake_gem
