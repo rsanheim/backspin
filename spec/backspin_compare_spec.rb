@@ -111,6 +111,59 @@ RSpec.describe "Backspin.compare" do
     expect(result.actual.stdout).to eq("howdy")
   end
 
+  it "passes each side's env to that side's command" do
+    result = Backspin.compare(
+      reference: {command: ["sh", "-c", 'printf "%s" "$REFERENCE_NAME"'], env: {"REFERENCE_NAME" => "same"}},
+      actual: {command: ["ruby", "-e", "print ENV.fetch('ACTUAL_NAME')"], env: {"ACTUAL_NAME" => "same"}}
+    )
+
+    expect(result.verified?).to be(true)
+    expect(result.expected.env).to eq({"REFERENCE_NAME" => "same"})
+    expect(result.actual.env).to eq({"ACTUAL_NAME" => "same"})
+  end
+
+  it "fails when the sides are given different env values" do
+    expect {
+      Backspin.compare(
+        reference: {command: ["sh", "-c", 'printf "%s" "$WHO"'], env: {"WHO" => "reference"}},
+        actual: {command: ["sh", "-c", 'printf "%s" "$WHO"'], env: {"WHO" => "actual"}}
+      )
+    }.to raise_error(Backspin::VerificationError) { |error|
+      expect(error.result.expected.stdout).to eq("reference")
+      expect(error.result.actual.stdout).to eq("actual")
+    }
+  end
+
+  it "uses a side's env instead of the top-level env" do
+    Backspin.configure { |config| config.raise_on_verification_failure = false }
+
+    result = Backspin.compare(
+      env: {"SHARED" => "both", "WHO" => "top"},
+      reference: {command: ["sh", "-c", 'printf "%s %s" "${SHARED:-unset}" "$WHO"'], env: {"WHO" => "reference"}},
+      actual: {command: ["sh", "-c", 'printf "%s %s" "${SHARED:-unset}" "$WHO"'], env: {"WHO" => "actual"}}
+    )
+
+    expect(result.expected.stdout).to eq("unset reference")
+    expect(result.actual.stdout).to eq("unset actual")
+    expect(result.expected.env).to eq({"WHO" => "reference"})
+    expect(result.actual.env).to eq({"WHO" => "actual"})
+  end
+
+  it "gives a plain command only the top-level env when the other side is a hash" do
+    Backspin.configure { |config| config.raise_on_verification_failure = false }
+
+    result = Backspin.compare(
+      env: {"WHO" => "top"},
+      reference: ["sh", "-c", 'printf "%s" "$WHO"'],
+      actual: {command: ["sh", "-c", 'printf "%s" "$WHO"'], env: {"WHO" => "side"}}
+    )
+
+    expect(result.expected.stdout).to eq("top")
+    expect(result.actual.stdout).to eq("side")
+    expect(result.expected.env).to eq({"WHO" => "top"})
+    expect(result.actual.env).to eq({"WHO" => "side"})
+  end
+
   it "pipes stdin into each side given as a hash" do
     result = Backspin.compare(
       reference: {command: ["cat"], stdin: "payload"},
