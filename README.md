@@ -92,7 +92,7 @@ result.verified?        # true when they match
 
 Only stdout, stderr, and exit status are compared, so the two commands can differ in argv and environment without any normalization. `filter` and `matcher` work exactly as they do for `Backspin.run`, and a mismatch raises `Backspin::VerificationError` unless `raise_on_verification_failure` is disabled.
 
-Pass `stdin:` to pipe the same data into both commands, or a Hash to give each side its own payload. A side left out of the Hash gets no stdin:
+Pass `stdin:` to pipe the same data into both commands, or a Hash to give each side its own payload. A side left out of the Hash gets empty stdin:
 
 ```ruby
 Backspin.compare(reference: ["jq", "."], actual: ["my-jq", "."], stdin: '{"a": 1}')
@@ -155,6 +155,7 @@ record_count: 3                            # increments on each write
 snapshot:
   command_type: "Open3::Capture3"
   args: ["echo", "hello"]
+  stdin: ""
   stdout: "hello\n"
   stderr: ""
   status: 0

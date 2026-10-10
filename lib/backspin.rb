@@ -274,13 +274,12 @@ module Backspin
     end
 
     def execute_command(command, env, stdin)
-      opts = stdin.nil? ? {} : {stdin_data: stdin}
       case command
       when String
-        env ? Open3.capture3(env, command, **opts) : Open3.capture3(command, **opts)
+        env ? Open3.capture3(env, command, stdin_data: stdin) : Open3.capture3(command, stdin_data: stdin)
       when Array
         raise ArgumentError, "command array cannot be empty" if command.empty?
-        env ? Open3.capture3(env, *command, **opts) : Open3.capture3(*command, **opts)
+        env ? Open3.capture3(env, *command, stdin_data: stdin) : Open3.capture3(*command, stdin_data: stdin)
       else
         raise ArgumentError, "command must be a String or Array"
       end

@@ -150,7 +150,7 @@ RSpec.describe "Backspin.compare" do
     expect(result.actual.stdout).to eq("two")
   end
 
-  it "gives no stdin to a side missing from the per-side hash" do
+  it "gives empty stdin to a side missing from the per-side hash" do
     result = Backspin.compare(
       reference: ["printf", "hello"],
       actual: ["cat"],
@@ -158,7 +158,7 @@ RSpec.describe "Backspin.compare" do
     )
 
     expect(result.verified?).to be(true)
-    expect(result.expected.stdin).to be_nil
+    expect(result.expected.stdin).to eq("")
     expect(result.actual.stdin).to eq("hello")
   end
 

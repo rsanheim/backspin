@@ -60,13 +60,13 @@ RSpec.describe "Backspin.run" do
     expect(result.actual.stdout).to eq("got:ping\n")
   end
 
-  it "does not record stdin when stdin is not provided" do
+  it "records empty stdin when stdin is not provided" do
     result = Backspin.run(["echo", "no stdin"], name: "command_no_stdin")
 
-    expect(result.actual.stdin).to be_nil
+    expect(result.actual.stdin).to eq("")
     record_path = Backspin.configuration.backspin_dir.join("command_no_stdin.yml")
     snapshot = YAML.load_file(record_path)["snapshot"]
-    expect(snapshot).not_to have_key("stdin")
+    expect(snapshot["stdin"]).to eq("")
   end
 
   it "records string commands as strings" do
