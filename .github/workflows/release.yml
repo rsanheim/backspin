@@ -9,11 +9,10 @@ on:
 permissions:
   contents: write
   id-token: write
-  pull-requests: read
 
 jobs:
   release:
-    uses: rsanheim/.github/.github/workflows/gem-release.yml@6c5b50f8b2f73018bace3c4f51134dc3d6297b3d
+    uses: rsanheim/.github/.github/workflows/gem-release.yml@dcedb5aca59edd7dfc934da1473250e3036db1ff
     with:
       gem: backspin
       ruby-version: "4.0.0"
