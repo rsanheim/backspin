@@ -34,5 +34,3 @@ namespace :spec do
 end
 
 task default: %i[spec standard]
-
-load "release.rake" if File.exist?("release.rake")

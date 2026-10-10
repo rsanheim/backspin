@@ -361,16 +361,24 @@ After checking out the repo, run `bin/setup` to install dependencies. Then, run 
 This repo also includes a decoupled full-stack fixture gem at `fixtures/projects/dummy_cli_gem` that uses Backspin the way downstream projects do. Run it with:
 
 ```bash
-bundle exec rake full_stack:dummy_app
+bundle exec rake spec:fake_gem
 ```
 
 To re-record that fixture's committed YAML snapshots:
 
 ```bash
-bundle exec rake full_stack:record_dummy_app
+bundle exec rake spec:fake_gem_record
 ```
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+To install this gem onto your local machine, run `bundle exec rake install`.
+
+### Releasing
+
+Open a pull request that updates `lib/backspin/version.rb` and adds a nonempty matching version section to `CHANGELOG.md` (for example, `## 0.14.0`). CI checks the effective gemspec version and fails if a version change has no release notes.
+
+Use the normal premerge CI checks to establish release readiness. After the pull request merges into `main`, the shared workflow rechecks the version and changelog, then invokes `rubygems/release-gem@v1`. The official action uses OIDC trusted publishing and Bundler's standard release task to build the gem, create and push `vVERSION`, and publish to RubyGems. After the action succeeds, the shared workflow creates a GitHub release using that changelog section. Invalid release notes prevent publication. Commits that leave the gem version unchanged do not trigger a release.
+
+The release implementation lives in [`rsanheim/.github`](https://github.com/rsanheim/.github) and is pinned to a commit in `.github/workflows/release.yml`. See [the maintainer setup](CONTRIBUTING.md#release-maintainer-setup) before enabling releases.
 
 ## Contributing
 

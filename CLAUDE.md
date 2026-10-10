@@ -24,8 +24,10 @@ bin/rspec spec/[file]:[line]    # Run specific test
 ### Building and Releasing
 ```bash
 bin/rake install     # Install gem locally for testing
-bin/rake release     # Release to RubyGems (updates version, tags, pushes)
+bin/rake build       # Build the gem locally
 ```
+
+Releases use a pull request that updates `lib/backspin/version.rb` and adds a matching nonempty section to `CHANGELOG.md`. Use normal premerge CI to establish readiness. After merge to `main`, the shared GitHub Actions workflow rechecks the version and changelog, invokes `rubygems/release-gem@v1` and Bundler for tagging and gem publication, then creates the GitHub release from the changelog notes. Invalid release notes prevent publication. See `CONTRIBUTING.md` for trusted publisher setup.
 
 ### Code Quality
 ```bash
