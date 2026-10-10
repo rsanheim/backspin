@@ -8,7 +8,7 @@ module Backspin
   class Configuration
     attr_accessor :scrub_credentials
     # The directory where backspin will store its files - defaults to fixtures/backspin
-    attr_accessor :backspin_dir
+    attr_reader :backspin_dir
     # Whether to raise an exception when verification fails in `run`/`capture` - defaults to true
     attr_accessor :raise_on_verification_failure
     # Logger for Backspin diagnostics - defaults to WARN level, logfmt-lite format
@@ -22,6 +22,10 @@ module Backspin
       @credential_patterns = default_credential_patterns
       @backspin_dir = Pathname(Dir.pwd).join("fixtures", "backspin")
       @logger = default_logger
+    end
+
+    def backspin_dir=(path)
+      @backspin_dir = Pathname.new(path)
     end
 
     def add_credential_pattern(pattern)

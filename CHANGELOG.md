@@ -3,6 +3,7 @@
 ## Unreleased
 * Improved verification errors with per-field summaries, three lines of diff context, and a 50-line limit (`BACKSPIN_FULL_DIFF=1` disables the limit).
 * Preserved custom matcher failure reasons and marked output missing a final newline.
+* Fixed `backspin_dir` configuration to accept String paths as well as Pathname objects.
 
 ## 0.13.0
 * Added `Backspin.compare(reference:, actual:)` for differential testing - runs both commands live and compares their filtered output, with no record file. Only stdout, stderr, and exit status are compared, so the two commands may differ in argv and env without normalization.
