@@ -7,7 +7,6 @@
 /tmp/
 /.claude
 /.cursor
-/checksums/
 
 /backspin*.gem
 # rspec failure tracking

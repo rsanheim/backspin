@@ -164,32 +164,18 @@ end
 
 ## Release Maintainer Setup
 
-The [shared setup and recovery guide](https://github.com/rsanheim/.github#readme)
-is the reference for adding new public gem repositories. In this repository,
-create the GitHub environment `release`, allowing `main`; leave required
-reviewers and wait timers off for automatic publication after merge.
+Setup, trusted publishing, workflow updates, verification, and recovery live in
+[the shared release guide](https://github.com/rsanheim/.github#readme).
 
-Before the first automated release, configure a RubyGems trusted publisher for the `backspin` gem using the [reusable workflow setup](https://guides.rubygems.org/trusted-publishing/#using-reusable-workflows):
+Backspin quick reference:
 
-- Repository owner: `rsanheim`
-- Repository name: `backspin`
-- Workflow filename: `gem-release.yml`
-- Workflow Repository Owner: `rsanheim`
-- Workflow Repository Name: `.github`
-- Environment: `release`
+1. Update `lib/backspin/version.rb` and add matching notes to `CHANGELOG.md`.
+2. Synchronize Backspin's version in `Gemfile.lock` and
+   `fixtures/projects/dummy_cli_gem/Gemfile.lock` (including its checksum entry).
+3. Run the normal checks and `BUNDLE_FROZEN=true bundle exec rake build`.
+4. Merge the reviewed PR to `main` to publish.
 
-The workflow filename identifies the shared reusable workflow. The caller is `.github/workflows/release.yml`, which grants GitHub OIDC permission (`id-token: write`). No long-lived RubyGems API key is needed.
-
-Release pull requests update `lib/backspin/version.rb` and add a nonempty `## VERSION` section to `CHANGELOG.md`; the section body becomes the GitHub release notes. Keep the version change and its notes in the same pull request. Use the normal premerge CI checks to establish release readiness. Merging to `main` starts the release workflow, which rechecks the version and changelog before publishing; invalid release notes prevent publication. Ordinary merges do not publish anything.
-
-Also synchronize Backspin's own version in `Gemfile.lock` and
-`fixtures/projects/dummy_cli_gem/Gemfile.lock`, including its checksum entry.
-Run the normal checks and `BUNDLE_FROZEN=true bundle exec rake build` before
-merging. A version bump should not update unrelated dependencies.
-
-If publication fails before the gem is uploaded, fix the cause and manually run the Release workflow on `main`, setting `previous-ref` to the tag before the version increase. Confirm the target version is still unpublished before retrying.
-
-The shared release workflow is pinned in `.github/workflows/release.yml`. Update that commit deliberately when adopting shared release changes. Bundler's standard `build`, `install`, and `release` tasks remain available; the automated workflow is the normal publishing path.
+The caller is [`.github/workflows/release.yml`](.github/workflows/release.yml).
 
 ## Code Style
 
