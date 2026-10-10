@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   release:
-    uses: rsanheim/.github/.github/workflows/gem-release.yml@420e2b9361c8a90f05af4cf239ee5921d8668ce6
+    uses: rsanheim/.github/.github/workflows/gem-release.yml@b6a55ecd18e3c2958c1af693a2d8eb8982a89118
     with:
       gem: backspin
       gemspec: backspin.gemspec
