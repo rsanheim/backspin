@@ -11,6 +11,7 @@ Note that Backspin is in early development and the API _will_ change before stab
 - [Making Changes](#making-changes)
 - [Testing](#testing)
 - [Submitting Changes](#submitting-changes)
+- [Release Maintainer Setup](#release-maintainer-setup)
 - [Code Style](#code-style)
 - [Reporting Issues](#reporting-issues)
 - [Feature Requests](#feature-requests)
@@ -160,6 +161,23 @@ end
 - Include tests for new functionality
 - Update examples in README.md if changing public APIs
 - Ensure CI passes (tests against Ruby 3.2, 3.3, 3.4, and 4.0)
+
+## Release Maintainer Setup
+
+Before the first automated release, configure a RubyGems trusted publisher for the `backspin` gem using the [reusable workflow setup](https://guides.rubygems.org/trusted-publishing/#using-reusable-workflows):
+
+- Repository owner: `rsanheim`
+- Repository name: `backspin`
+- Workflow filename: `gem-release.yml`
+- Workflow Repository Owner: `rsanheim`
+- Workflow Repository Name: `.github`
+- Environment: leave blank
+
+The workflow filename identifies the shared reusable workflow. The caller is `.github/workflows/release.yml`, which grants GitHub OIDC permission (`id-token: write`). No long-lived RubyGems API key is needed.
+
+Release pull requests update `lib/backspin/version.rb` and add a nonempty `## VERSION` section to `CHANGELOG.md`; the section body becomes the GitHub release notes. Keep the version change and its notes in the same pull request. Merging to `main` releases only after the required CircleCI checks succeed for the merge commit. Ordinary merges do not publish anything.
+
+The shared release workflow is pinned in `.github/workflows/release.yml`. Update that commit deliberately when adopting shared release changes. Bundler's standard `build`, `install`, and `release` tasks remain available; the automated workflow is the normal publishing path.
 
 ## Code Style
 

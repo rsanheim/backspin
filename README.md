@@ -361,16 +361,24 @@ After checking out the repo, run `bin/setup` to install dependencies. Then, run 
 This repo also includes a decoupled full-stack fixture gem at `fixtures/projects/dummy_cli_gem` that uses Backspin the way downstream projects do. Run it with:
 
 ```bash
-bundle exec rake full_stack:dummy_app
+bundle exec rake spec:fake_gem
 ```
 
 To re-record that fixture's committed YAML snapshots:
 
 ```bash
-bundle exec rake full_stack:record_dummy_app
+bundle exec rake spec:fake_gem_record
 ```
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+To install this gem onto your local machine, run `bundle exec rake install`.
+
+### Releasing
+
+Open a pull request that updates `lib/backspin/version.rb` and adds a nonempty matching version section to `CHANGELOG.md` (for example, `## 0.14.0`). CI checks the effective gemspec version and fails if a version change has no release notes.
+
+After the pull request merges into `main`, the release workflow waits for all CircleCI checks on that exact commit: Ruby 3.2, 3.3, 3.4, and 4.0 tests, plus lint. It then creates the `vVERSION` tag, publishes the gem with RubyGems trusted publishing, and creates a GitHub release using that changelog section. Commits that leave the gem version unchanged do not trigger a release.
+
+The release implementation lives in [`rsanheim/.github`](https://github.com/rsanheim/.github) and is pinned to a commit in `.github/workflows/release.yml`. See [the maintainer setup](CONTRIBUTING.md#release-maintainer-setup) before enabling releases.
 
 ## Contributing
 

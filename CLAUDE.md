@@ -24,8 +24,10 @@ bin/rspec spec/[file]:[line]    # Run specific test
 ### Building and Releasing
 ```bash
 bin/rake install     # Install gem locally for testing
-bin/rake release     # Release to RubyGems (updates version, tags, pushes)
+bin/rake build       # Build the gem locally
 ```
+
+Releases use a pull request that updates `lib/backspin/version.rb` and adds a matching nonempty section to `CHANGELOG.md`. After merge to `main`, the shared GitHub Actions workflow waits for CircleCI on the exact commit, tags it, and publishes to RubyGems and GitHub. See `CONTRIBUTING.md` for trusted publisher setup.
 
 ### Code Quality
 ```bash

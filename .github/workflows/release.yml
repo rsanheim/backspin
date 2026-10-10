@@ -1,0 +1,22 @@
+name: Release
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  statuses: read
+  id-token: write
+  pull-requests: read
+
+jobs:
+  release:
+    uses: rsanheim/.github/.github/workflows/gem-release.yml@420e2b9361c8a90f05af4cf239ee5921d8668ce6
+    with:
+      gem: backspin
+      gemspec: backspin.gemspec
+      ruby-version: "4.0.0"
+      required-statuses: '["ci/circleci: test-3.2", "ci/circleci: test-3.3", "ci/circleci: test-3.4", "ci/circleci: test-4.0", "ci/circleci: lint"]'
