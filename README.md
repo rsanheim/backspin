@@ -182,7 +182,7 @@ If `env:` is not provided, it is not passed to `Open3.capture3` and is not recor
 Backspin.run(["cat"], name: "with_stdin", stdin: "hello from stdin")
 ```
 
-`stdin:` must be a String. It is passed to `Open3.capture3` as `stdin_data:` and saved in the record, but only stdout, stderr, and exit status are verified. If `stdin:` is not provided, nothing is passed and no `stdin` key is recorded. `stdin:` is not supported with the block form.
+`stdin:` is passed to `Open3.capture3` as `stdin_data:` and saved in the record, but only stdout, stderr, and exit status are verified. `stdin:` is not supported with the block form.
 
 ### Custom Matchers
 

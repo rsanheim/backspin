@@ -94,7 +94,6 @@ module Backspin
       end
 
       raise ArgumentError, "command is required" if command.nil?
-      validate_stdin!(stdin)
 
       perform_command_run(
         command,
@@ -142,20 +141,7 @@ module Backspin
     def compare(reference:, actual:, env: nil, stdin: nil, matcher: nil, filter: nil)
       normalized_env = normalize_env(env)
 
-      case stdin
-      when nil, String
-        reference_stdin = actual_stdin = stdin
-      when Hash
-        unless (stdin.keys - %i[reference actual]).empty?
-          raise ArgumentError, "stdin hash keys must be :reference and/or :actual, got #{stdin.keys.inspect}"
-        end
-        reference_stdin = stdin[:reference]
-        actual_stdin = stdin[:actual]
-      else
-        raise ArgumentError, "stdin must be a String or a Hash with :reference and/or :actual, got #{stdin.class}"
-      end
-      validate_stdin!(reference_stdin)
-      validate_stdin!(actual_stdin)
+      reference_stdin, actual_stdin = stdin.is_a?(Hash) ? stdin.values_at(:reference, :actual) : [stdin, stdin]
 
       expected_snapshot, = capture_command_snapshot(reference, normalized_env, reference_stdin)
       if expected_snapshot.stdout.empty? && expected_snapshot.stderr.empty?
@@ -285,12 +271,6 @@ module Backspin
       raise ArgumentError, "env must be a Hash" unless env.is_a?(Hash)
 
       env.empty? ? nil : env
-    end
-
-    def validate_stdin!(stdin)
-      return if stdin.nil? || stdin.is_a?(String)
-
-      raise ArgumentError, "stdin must be a String, got #{stdin.class}"
     end
 
     def execute_command(command, env, stdin)

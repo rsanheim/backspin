@@ -221,12 +221,6 @@ RSpec.describe "Backspin.run" do
     end.to raise_error(ArgumentError, /env is not supported when using a block/)
   end
 
-  it "rejects non-string stdin values" do
-    expect do
-      Backspin.run(["cat"], name: "bad_stdin", stdin: 123)
-    end.to raise_error(ArgumentError, /stdin must be a String, got Integer/)
-  end
-
   it "rejects stdin when using a block" do
     expect do
       Backspin.run(name: "block_stdin", stdin: "payload") do
