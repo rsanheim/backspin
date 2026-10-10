@@ -138,6 +138,8 @@ module Backspin
       end
 
       diff_lines = []
+      first_visible = visible.index(true)
+      diff_lines << "..." if first_visible&.positive?
       in_hunk = false
 
       max_lines.times do |i|

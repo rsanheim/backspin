@@ -292,6 +292,7 @@ RSpec.describe "Backspin.run" do
       diff_body = lines[(stdout_idx + 1)..]
 
       expect(diff_body).to eq([
+        "...",
         " line 5",
         " line 6",
         " line 7",

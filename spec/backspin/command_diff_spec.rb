@@ -174,6 +174,33 @@ RSpec.describe Backspin::CommandDiff do
       expect(diff).not_to include(" line 9")
     end
 
+    it "marks omitted leading lines before a change near the end" do
+      expected_snapshot = Backspin::Snapshot.new(
+        command_type: Open3::Capture3,
+        args: ["test"],
+        stdout: (1..20).map { |i| "line #{i}\n" }.join
+      )
+      actual_snapshot = Backspin::Snapshot.new(
+        command_type: Open3::Capture3,
+        args: ["test"],
+        stdout: (1..20).map { |i| (i == 18) ? "CHANGED 18\n" : "line #{i}\n" }.join
+      )
+
+      diff = described_class.new(expected: expected_snapshot, actual: actual_snapshot).diff
+
+      expect(diff.lines.map(&:chomp)).to eq([
+        "[stdout]",
+        "...",
+        " line 15",
+        " line 16",
+        " line 17",
+        "-line 18",
+        "+CHANGED 18",
+        " line 19",
+        " line 20"
+      ])
+    end
+
     it "uses ... separator for distant changes" do
       expected_lines = (1..20).map { |i| "line #{i}" }.join("\n") + "\n"
       actual_lines = (1..20).map { |i|
@@ -265,6 +292,9 @@ RSpec.describe Backspin::CommandDiff do
 
   context "diff truncation" do
     it "truncates large diffs with a message" do
+      original_full_diff = ENV["BACKSPIN_FULL_DIFF"]
+      ENV.delete("BACKSPIN_FULL_DIFF")
+
       expected_lines = (1..100).map { |i| "expected #{i}" }.join("\n") + "\n"
       actual_lines = (1..100).map { |i| "actual #{i}" }.join("\n") + "\n"
 
@@ -290,9 +320,13 @@ RSpec.describe Backspin::CommandDiff do
 
       expect(diff).to include("BACKSPIN_FULL_DIFF=1")
       expect(diff).to include("truncated")
+    ensure
+      ENV["BACKSPIN_FULL_DIFF"] = original_full_diff
     end
 
     it "shows full diff when BACKSPIN_FULL_DIFF=1" do
+      original_full_diff = ENV["BACKSPIN_FULL_DIFF"]
+
       expected_lines = (1..100).map { |i| "expected #{i}" }.join("\n") + "\n"
       actual_lines = (1..100).map { |i| "actual #{i}" }.join("\n") + "\n"
 
@@ -321,7 +355,7 @@ RSpec.describe Backspin::CommandDiff do
       expect(diff).to include("-expected 100")
       expect(diff).to include("+actual 100")
     ensure
-      ENV.delete("BACKSPIN_FULL_DIFF")
+      ENV["BACKSPIN_FULL_DIFF"] = original_full_diff
     end
   end
 end
