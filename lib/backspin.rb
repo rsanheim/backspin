@@ -129,27 +129,28 @@ module Backspin
     # Only stdout, stderr, and status are compared, so the two commands may
     # differ in argv and env without any normalization.
     #
-    # @param reference [String, Array] Command that defines the correct output
-    # @param actual [String, Array] Command under test
+    # Either side may be a Hash of {command:, stdin:} to pipe data into that
+    # command's stdin. Stdin is recorded on each snapshot, not compared.
+    #
+    # @param reference [String, Array, Hash] Command that defines the correct output
+    # @param actual [String, Array, Hash] Command under test
     # @param env [Hash] Environment variables passed to both commands
-    # @param stdin [String, Hash] Data written to both commands' stdin, or
-    #   {reference: "...", actual: "..."} for per-side stdin. A side missing
-    #   from the Hash gets no stdin. Recorded on each snapshot, not compared.
     # @param matcher [Proc, Hash] Custom matcher for verification
     # @param filter [Proc] Custom filter applied to both sides before comparing
     # @return [BackspinResult] expected = reference, actual = command under test
-    def compare(reference:, actual:, env: nil, stdin: nil, matcher: nil, filter: nil)
+    def compare(reference:, actual:, env: nil, matcher: nil, filter: nil)
       normalized_env = normalize_env(env)
 
-      reference_stdin, actual_stdin = stdin.is_a?(Hash) ? stdin.values_at(:reference, :actual) : [stdin, stdin]
+      reference_command, reference_stdin = reference.is_a?(Hash) ? reference.values_at(:command, :stdin) : [reference, nil]
+      actual_command, actual_stdin = actual.is_a?(Hash) ? actual.values_at(:command, :stdin) : [actual, nil]
 
-      expected_snapshot, = capture_command_snapshot(reference, normalized_env, reference_stdin)
+      expected_snapshot, = capture_command_snapshot(reference_command, normalized_env, reference_stdin)
       if expected_snapshot.stdout.empty? && expected_snapshot.stderr.empty?
         raise ReferenceCommandError,
           "Reference command produced no output (exit status #{expected_snapshot.status}): #{reference.inspect}"
       end
 
-      actual_snapshot, = capture_command_snapshot(actual, normalized_env, actual_stdin)
+      actual_snapshot, = capture_command_snapshot(actual_command, normalized_env, actual_stdin)
 
       command_diff = CommandDiff.new(
         expected: expected_snapshot,

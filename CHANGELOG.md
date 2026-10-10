@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-* Added `stdin:` to `Backspin.run` and `Backspin.compare` to pipe a String into the command, replacing `sh -c` wrappers. `compare` also accepts `{reference:, actual:}` for per-side stdin. Stdin is saved on every snapshot like stdout and stderr (empty when not given), so re-recorded files gain a `stdin` line, but it is not compared.
+* Added `stdin:` to `Backspin.run` and `Backspin.compare` to pipe a String into the command, replacing `sh -c` wrappers. For `compare`, give a side as `{command:, stdin:}`. Stdin is saved on every snapshot like stdout and stderr (empty when not given), so re-recorded files gain a `stdin` line, but it is not compared.
 
 ## 0.14.0
 * Improved verification errors with per-field summaries for stdout, stderr, and exit status, plus three lines of context around output changes. Long diffs are limited to 50 lines; set `BACKSPIN_FULL_DIFF=1` to show the full diff.

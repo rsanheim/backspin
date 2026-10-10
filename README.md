@@ -92,15 +92,12 @@ result.verified?        # true when they match
 
 Only stdout, stderr, and exit status are compared, so the two commands can differ in argv and environment without any normalization. `filter` and `matcher` work exactly as they do for `Backspin.run`, and a mismatch raises `Backspin::VerificationError` unless `raise_on_verification_failure` is disabled.
 
-Pass `stdin:` to pipe the same data into both commands, or a Hash to give each side its own payload. A side left out of the Hash gets empty stdin:
+To pipe data into a command's stdin, give that side as a Hash with `command:` and `stdin:`:
 
 ```ruby
-Backspin.compare(reference: ["jq", "."], actual: ["my-jq", "."], stdin: '{"a": 1}')
-
 Backspin.compare(
-  reference: ["wc", "-c"],
-  actual: ["wc", "-c"],
-  stdin: {reference: "abc", actual: "xyz"}
+  reference: {command: ["jq", "."], stdin: '{"a": 1}'},
+  actual: {command: ["my-jq", "."], stdin: '{"a": 1}'}
 )
 ```
 

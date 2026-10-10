@@ -111,38 +111,25 @@ RSpec.describe "Backspin.compare" do
     expect(result.actual.stdout).to eq("howdy")
   end
 
-  it "pipes the same stdin to both commands" do
+  it "pipes stdin into each side given as a hash" do
     result = Backspin.compare(
-      reference: ["cat"],
-      actual: ["sh", "-c", "read x; printf %s \"$x\""],
-      stdin: "shared payload"
+      reference: {command: ["cat"], stdin: "payload"},
+      actual: {command: ["sh", "-c", "read x; printf %s \"$x\""], stdin: "payload"}
     )
 
     expect(result.verified?).to be(true)
-    expect(result.actual.stdout).to eq("shared payload")
-    expect(result.expected.stdin).to eq("shared payload")
-    expect(result.actual.stdin).to eq("shared payload")
+    expect(result.actual.stdout).to eq("payload")
+    expect(result.expected.stdin).to eq("payload")
+    expect(result.actual.stdin).to eq("payload")
+    expect(result.expected.args).to eq(["cat"])
   end
 
-  it "verifies when per-side stdin produces equivalent output" do
-    result = Backspin.compare(
-      reference: ["wc", "-c"],
-      actual: ["wc", "-c"],
-      stdin: {reference: "abc", actual: "xyz"}
-    )
-
-    expect(result.verified?).to be(true)
-    expect(result.expected.stdin).to eq("abc")
-    expect(result.actual.stdin).to eq("xyz")
-  end
-
-  it "fails when per-side stdin produces different output" do
+  it "fails when the sides are given different stdin" do
     Backspin.configure { |config| config.raise_on_verification_failure = false }
 
     result = Backspin.compare(
-      reference: ["cat"],
-      actual: ["cat"],
-      stdin: {reference: "one", actual: "two"}
+      reference: {command: ["cat"], stdin: "one"},
+      actual: {command: ["cat"], stdin: "two"}
     )
 
     expect(result.verified?).to be(false)
@@ -150,11 +137,10 @@ RSpec.describe "Backspin.compare" do
     expect(result.actual.stdout).to eq("two")
   end
 
-  it "gives empty stdin to a side missing from the per-side hash" do
+  it "mixes a hash side with a plain command" do
     result = Backspin.compare(
       reference: ["printf", "hello"],
-      actual: ["cat"],
-      stdin: {actual: "hello"}
+      actual: {command: ["cat"], stdin: "hello"}
     )
 
     expect(result.verified?).to be(true)
