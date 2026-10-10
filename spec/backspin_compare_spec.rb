@@ -111,6 +111,43 @@ RSpec.describe "Backspin.compare" do
     expect(result.actual.stdout).to eq("howdy")
   end
 
+  it "pipes stdin into each side given as a hash" do
+    result = Backspin.compare(
+      reference: {command: ["cat"], stdin: "payload"},
+      actual: {command: ["sh", "-c", "read x; printf %s \"$x\""], stdin: "payload"}
+    )
+
+    expect(result.verified?).to be(true)
+    expect(result.actual.stdout).to eq("payload")
+    expect(result.expected.stdin).to eq("payload")
+    expect(result.actual.stdin).to eq("payload")
+    expect(result.expected.args).to eq(["cat"])
+  end
+
+  it "fails when the sides are given different stdin" do
+    Backspin.configure { |config| config.raise_on_verification_failure = false }
+
+    result = Backspin.compare(
+      reference: {command: ["cat"], stdin: "one"},
+      actual: {command: ["cat"], stdin: "two"}
+    )
+
+    expect(result.verified?).to be(false)
+    expect(result.expected.stdout).to eq("one")
+    expect(result.actual.stdout).to eq("two")
+  end
+
+  it "mixes a hash side with a plain command" do
+    result = Backspin.compare(
+      reference: ["printf", "hello"],
+      actual: {command: ["cat"], stdin: "hello"}
+    )
+
+    expect(result.verified?).to be(true)
+    expect(result.expected.stdin).to eq("")
+    expect(result.actual.stdin).to eq("hello")
+  end
+
   it "raises when the reference command produces no output" do
     expect {
       Backspin.compare(

@@ -76,17 +76,19 @@ module Backspin
     # @param command [String, Array] Command to execute via Open3.capture3
     # @param name [String] Name for the record file
     # @param env [Hash] Environment variables to pass to Open3.capture3
+    # @param stdin [String] Data written to the command's stdin (recorded, not compared)
     # @param mode [Symbol] Recording mode - :auto, :record, :verify
     # @param matcher [Proc, Hash] Custom matcher for verification
     # @param filter [Proc] Custom filter for recorded data/canonicalization
     # @param filter_on [Symbol] Filter application mode - :both (default), :record
     # @return [BackspinResult] Aggregate result for this run
-    def run(command = nil, name:, env: nil, mode: :auto, matcher: nil, filter: nil, filter_on: :both, &block)
+    def run(command = nil, name:, env: nil, stdin: nil, mode: :auto, matcher: nil, filter: nil, filter_on: :both, &block)
       validate_filter_on!(filter_on)
 
       if block_given?
         raise ArgumentError, "command must be omitted when using a block" unless command.nil?
         raise ArgumentError, "env is not supported when using a block" unless env.nil?
+        raise ArgumentError, "stdin is not supported when using a block" unless stdin.nil?
 
         return perform_capture(name, mode: mode, matcher: matcher, filter: filter, filter_on: filter_on, &block)
       end
@@ -97,6 +99,7 @@ module Backspin
         command,
         name: name,
         env: env,
+        stdin: stdin,
         mode: mode,
         matcher: matcher,
         filter: filter,
@@ -126,8 +129,11 @@ module Backspin
     # Only stdout, stderr, and status are compared, so the two commands may
     # differ in argv and env without any normalization.
     #
-    # @param reference [String, Array] Command that defines the correct output
-    # @param actual [String, Array] Command under test
+    # Either side may be a Hash of {command:, stdin:} to pipe data into that
+    # command's stdin. Stdin is recorded on each snapshot, not compared.
+    #
+    # @param reference [String, Array, Hash] Command that defines the correct output
+    # @param actual [String, Array, Hash] Command under test
     # @param env [Hash] Environment variables passed to both commands
     # @param matcher [Proc, Hash] Custom matcher for verification
     # @param filter [Proc] Custom filter applied to both sides before comparing
@@ -135,13 +141,16 @@ module Backspin
     def compare(reference:, actual:, env: nil, matcher: nil, filter: nil)
       normalized_env = normalize_env(env)
 
-      expected_snapshot, = capture_command_snapshot(reference, normalized_env)
+      reference_command, reference_stdin = reference.is_a?(Hash) ? reference.values_at(:command, :stdin) : [reference, nil]
+      actual_command, actual_stdin = actual.is_a?(Hash) ? actual.values_at(:command, :stdin) : [actual, nil]
+
+      expected_snapshot, = capture_command_snapshot(reference_command, normalized_env, reference_stdin)
       if expected_snapshot.stdout.empty? && expected_snapshot.stderr.empty?
         raise ReferenceCommandError,
           "Reference command produced no output (exit status #{expected_snapshot.status}): #{reference.inspect}"
       end
 
-      actual_snapshot, = capture_command_snapshot(actual, normalized_env)
+      actual_snapshot, = capture_command_snapshot(actual_command, normalized_env, actual_stdin)
 
       command_diff = CommandDiff.new(
         expected: expected_snapshot,
@@ -188,7 +197,7 @@ module Backspin
       result
     end
 
-    def perform_command_run(command, name:, env:, mode:, matcher:, filter:, filter_on:)
+    def perform_command_run(command, name:, env:, stdin:, mode:, matcher:, filter:, filter_on:)
       record_path = Record.build_record_path(name)
       mode = determine_mode(mode, record_path)
       validate_mode!(mode)
@@ -199,7 +208,7 @@ module Backspin
 
       result = case mode
       when :record
-        actual_snapshot, output = capture_command_snapshot(command, normalized_env)
+        actual_snapshot, output = capture_command_snapshot(command, normalized_env, stdin)
         record.set_snapshot(actual_snapshot)
         record.save(filter: filter)
         BackspinResult.new(
@@ -217,7 +226,7 @@ module Backspin
           raise RecordFormatError, "Invalid record format: expected Open3::Capture3 for run"
         end
 
-        actual_snapshot, output = capture_command_snapshot(command, normalized_env)
+        actual_snapshot, output = capture_command_snapshot(command, normalized_env, stdin)
         command_diff = CommandDiff.new(
           expected: expected_snapshot,
           actual: actual_snapshot,
@@ -243,12 +252,13 @@ module Backspin
       result
     end
 
-    def capture_command_snapshot(command, env)
-      stdout, stderr, status = execute_command(command, env)
+    def capture_command_snapshot(command, env, stdin)
+      stdout, stderr, status = execute_command(command, env, stdin)
       snapshot = Snapshot.new(
         command_type: Open3::Capture3,
         args: command,
         env: env,
+        stdin: stdin,
         stdout: stdout,
         stderr: stderr,
         status: status.exitstatus,
@@ -264,13 +274,13 @@ module Backspin
       env.empty? ? nil : env
     end
 
-    def execute_command(command, env)
+    def execute_command(command, env, stdin)
       case command
       when String
-        env ? Open3.capture3(env, command) : Open3.capture3(command)
+        env ? Open3.capture3(env, command, stdin_data: stdin) : Open3.capture3(command, stdin_data: stdin)
       when Array
         raise ArgumentError, "command array cannot be empty" if command.empty?
-        env ? Open3.capture3(env, *command) : Open3.capture3(*command)
+        env ? Open3.capture3(env, *command, stdin_data: stdin) : Open3.capture3(*command, stdin_data: stdin)
       else
         raise ArgumentError, "command must be a String or Array"
       end
