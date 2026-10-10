@@ -171,11 +171,13 @@ Before the first automated release, configure a RubyGems trusted publisher for t
 - Workflow filename: `gem-release.yml`
 - Workflow Repository Owner: `rsanheim`
 - Workflow Repository Name: `.github`
-- Environment: leave blank
+- Environment: `release`
 
 The workflow filename identifies the shared reusable workflow. The caller is `.github/workflows/release.yml`, which grants GitHub OIDC permission (`id-token: write`). No long-lived RubyGems API key is needed.
 
 Release pull requests update `lib/backspin/version.rb` and add a nonempty `## VERSION` section to `CHANGELOG.md`; the section body becomes the GitHub release notes. Keep the version change and its notes in the same pull request. Use the normal premerge CI checks to establish release readiness. Merging to `main` starts the release workflow, which rechecks the version and changelog before publishing; invalid release notes prevent publication. Ordinary merges do not publish anything.
+
+If publication fails before the gem is uploaded, fix the cause and manually run the Release workflow on `main`, setting `previous-ref` to the tag before the version increase. Confirm the target version is still unpublished before retrying.
 
 The shared release workflow is pinned in `.github/workflows/release.yml`. Update that commit deliberately when adopting shared release changes. Bundler's standard `build`, `install`, and `release` tasks remain available; the automated workflow is the normal publishing path.
 

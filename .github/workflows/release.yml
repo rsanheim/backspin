@@ -1,6 +1,12 @@
 name: Release
 
 on:
+  workflow_dispatch:
+    inputs:
+      previous-ref:
+        description: Tag or commit before the version increase (for retrying an unpublished release)
+        required: true
+        type: string
   pull_request:
     types: [opened, synchronize, reopened]
   push:
@@ -12,7 +18,7 @@ permissions:
 
 jobs:
   release:
-    uses: rsanheim/.github/.github/workflows/gem-release.yml@dcedb5aca59edd7dfc934da1473250e3036db1ff
+    uses: rsanheim/.github/.github/workflows/gem-release.yml@4ced52859dd60019b930a3f2023424e77b37ee2a
     with:
       gem: backspin
       ruby-version: "4.0.0"
