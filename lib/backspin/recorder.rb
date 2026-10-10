@@ -26,7 +26,7 @@ module Backspin
         stdout: captured_stdout,
         stderr: captured_stderr,
         status: 0,
-        recorded_at: Time.now.iso8601
+        recorded_at: Time.now.utc.iso8601
       )
 
       record.set_snapshot(actual_snapshot)

@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.description = "Fixture gem that shells out to unix utilities and is tested via Backspin snapshots."
   spec.homepage = "https://example.com/dummy_cli_gem"
   spec.license = "MIT"
-  spec.required_ruby_version = Gem::Requirement.new(">= 3.1.0")
+  spec.required_ruby_version = Gem::Requirement.new(">= 3.2.0")
 
   spec.files = Dir.chdir(__dir__) do
     Dir["lib/**/*.rb", "exe/*", "spec/**/*", "script/**/*", "README.md", "LICENSE.txt"]

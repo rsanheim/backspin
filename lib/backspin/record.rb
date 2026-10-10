@@ -44,7 +44,7 @@ module Backspin
 
     def set_snapshot(snapshot)
       @snapshot = snapshot
-      snapshot_recorded_at = snapshot.recorded_at || Time.now.iso8601
+      snapshot_recorded_at = snapshot.recorded_at || Time.now.utc.iso8601
       @first_recorded_at ||= snapshot_recorded_at
       @recorded_at = snapshot_recorded_at
       self
