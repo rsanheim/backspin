@@ -168,7 +168,10 @@ module Backspin
     end
 
     def render_line(line)
-      line.to_s.chomp
+      rendered = line.to_s.chomp
+      return rendered if line.to_s.end_with?("\n")
+
+      "#{rendered}\n\\ No newline at end of output"
     end
 
     def maybe_truncate(diff_text)

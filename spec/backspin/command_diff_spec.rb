@@ -232,10 +232,35 @@ RSpec.describe Backspin::CommandDiff do
         actual: actual_snapshot
       ).diff
 
-      expect(diff).to include("[stdout]")
-      expect(diff).to include("-line with newline")
-      expect(diff).to include("+line with newline")
+      expect(diff.lines.map(&:chomp)).to eq([
+        "[stdout]",
+        "-line with newline",
+        "+line with newline",
+        "\\ No newline at end of output"
+      ])
     end
+  end
+
+  it "marks the expected line when a final newline is added" do
+    expected_snapshot = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
+      args: ["test"],
+      stdout: "same text"
+    )
+    actual_snapshot = Backspin::Snapshot.new(
+      command_type: Open3::Capture3,
+      args: ["test"],
+      stdout: "same text\n"
+    )
+
+    diff = described_class.new(expected: expected_snapshot, actual: actual_snapshot).diff
+
+    expect(diff.lines.map(&:chomp)).to eq([
+      "[stdout]",
+      "-same text",
+      "\\ No newline at end of output",
+      "+same text"
+    ])
   end
 
   context "diff truncation" do

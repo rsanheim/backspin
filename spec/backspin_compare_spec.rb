@@ -85,6 +85,21 @@ RSpec.describe "Backspin.compare" do
     expect(result.verified?).to be(true)
   end
 
+  it "explains a custom matcher failure when the output fields are unchanged" do
+    expect {
+      Backspin.compare(
+        reference: ["printf", "hello"],
+        actual: ["sh", "-c", "printf hello"],
+        matcher: ->(expected, actual) { expected["args"] == actual["args"] }
+      )
+    }.to raise_error(Backspin::VerificationError) { |error|
+      expect(error.message).to include("Output verification failed:")
+      expect(error.message).to include("Command failed: custom matcher failed")
+      expect(error.message).to include("stdout: unchanged", "stderr: unchanged", "status: unchanged")
+      expect(error.result.diff).to eq("")
+    }
+  end
+
   it "passes env to both commands" do
     result = Backspin.compare(
       reference: ["sh", "-c", 'printf "%s" "$GREETING"'],

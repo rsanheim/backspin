@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+* Improved verification errors with per-field summaries, three lines of diff context, and a 50-line limit (`BACKSPIN_FULL_DIFF=1` disables the limit).
+* Preserved custom matcher failure reasons and marked output missing a final newline.
+
 ## 0.13.0
 * Added `Backspin.compare(reference:, actual:)` for differential testing - runs both commands live and compares their filtered output, with no record file. Only stdout, stderr, and exit status are compared, so the two commands may differ in argv and env without normalization.
 * Added `Backspin::ReferenceCommandError`, raised when a compare's reference command produces no output at all (usually a sign it failed to start), rather than comparing empty to empty.

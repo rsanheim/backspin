@@ -37,6 +37,22 @@ RSpec.describe "Backspin matcher contract" do
     expect(result).to be_verified
   end
 
+  it "identifies a failing field matcher even when captured output is unchanged" do
+    Backspin.capture("required_token", mode: :record) do
+      puts "hello"
+    end
+
+    expect {
+      Backspin.capture("required_token", matcher: {stdout: ->(_expected, actual) { actual.include?("required") }}) do
+        puts "hello"
+      end
+    }.to raise_error(Backspin::VerificationError) { |error|
+      expect(error.message).to include("Command failed: stdout custom matcher failed")
+      expect(error.message).to include("stdout: unchanged", "stderr: unchanged", "status: unchanged")
+      expect(error.result.diff).to eq("")
+    }
+  end
+
   it "supports :all matchers alongside field matchers" do
     Backspin.run(["echo", "status"], name: "all_matcher", mode: :record)
 

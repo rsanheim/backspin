@@ -253,6 +253,23 @@ result.error_message  # Human-readable error if verification failed
 result.diff  # Diff between expected and actual output
 ```
 
+### Verification diffs
+
+Verification errors include the failure reason and a summary of changes to stdout, stderr,
+and exit status. Output diffs show three lines of context around each change, with `...`
+where unchanged lines are omitted. A `\ No newline at end of output` marker identifies
+output without a final newline.
+
+Diffs are limited to 50 lines by default. To see every diff line, run your tests with:
+
+```sh
+BACKSPIN_FULL_DIFF=1 bundle exec rake spec
+```
+
+The limit applies to `result.diff` and the diff portion of `result.error_message`. The
+environment variable removes the size limit; unchanged lines outside the context windows
+are still omitted.
+
 ### Configuration
 
 You can configure Backspin's behavior globally:

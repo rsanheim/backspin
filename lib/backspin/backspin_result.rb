@@ -36,7 +36,7 @@ module Backspin
       return nil unless verified? == false
       return "Output verification failed" unless @command_diff
 
-      parts = ["Summary:"]
+      parts = ["Output verification failed:", @command_diff.summary, "", "Summary:"]
       @command_diff.field_summary.each do |line|
         parts << "  #{line}"
       end
