@@ -169,4 +169,59 @@ RSpec.describe "Backspin.compare" do
 
     expect(File.exist?(marker)).to be(false)
   end
+
+  it "reports a mismatch that credential-like patterns would otherwise hide" do
+    Backspin.configure { |config| config.raise_on_verification_failure = false }
+
+    result = Backspin.compare(
+      reference: ["printf", "/tmp/run-parity-aaaaaaaa/out"],
+      actual: ["printf", "/tmp/run-parity-bbbbbbbb/out"]
+    )
+
+    expect(result.verified?).to be(false)
+    expect(result.diff).to include("-/tmp/run-parity-aaaaaaaa/out")
+    expect(result.diff).to include("+/tmp/run-parity-bbbbbbbb/out")
+  end
+
+  it "passes raw, unscrubbed output to the filter" do
+    seen = []
+    normalize = ->(snapshot) {
+      seen << snapshot["stdout"]
+      snapshot.merge("stdout" => snapshot["stdout"].gsub(%r{/tmp/run-parity-\w+}, "[tmpdir]"))
+    }
+
+    result = Backspin.compare(
+      reference: ["printf", "/tmp/run-parity-aaaaaaaa/out"],
+      actual: ["printf", "/tmp/run-parity-bbbbbbbb/out"],
+      filter: normalize
+    )
+
+    expect(result.verified?).to be(true)
+    expect(seen).to eq(["/tmp/run-parity-aaaaaaaa/out", "/tmp/run-parity-bbbbbbbb/out"])
+  end
+
+  it "exposes unscrubbed stdout, args, and env on the result" do
+    result = Backspin.compare(
+      reference: ["sh", "-c", 'printf "%s" "$KEY"', "AKIAIOSFODNN7EXAMPLE"],
+      actual: ["sh", "-c", 'printf "%s" "$KEY"', "AKIAIOSFODNN7EXAMPLE"],
+      env: {"KEY" => "AKIAIOSFODNN7EXAMPLE"}
+    )
+
+    expect(result.verified?).to be(true)
+    expect(result.expected.stdout).to eq("AKIAIOSFODNN7EXAMPLE")
+    expect(result.actual.stdout).to eq("AKIAIOSFODNN7EXAMPLE")
+    expect(result.actual.args.last).to eq("AKIAIOSFODNN7EXAMPLE")
+    expect(result.actual.env).to eq({"KEY" => "AKIAIOSFODNN7EXAMPLE"})
+  end
+
+  it "exposes unscrubbed stdin on the result" do
+    result = Backspin.compare(
+      reference: {command: ["cat"], stdin: "AKIAIOSFODNN7EXAMPLE"},
+      actual: {command: ["cat"], stdin: "AKIAIOSFODNN7EXAMPLE"}
+    )
+
+    expect(result.verified?).to be(true)
+    expect(result.expected.stdin).to eq("AKIAIOSFODNN7EXAMPLE")
+    expect(result.actual.stdin).to eq("AKIAIOSFODNN7EXAMPLE")
+  end
 end

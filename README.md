@@ -101,6 +101,8 @@ Backspin.compare(
 )
 ```
 
+`compare` does not scrub credentials. Nothing is written to disk, and scrubbing before comparing can hide real differences, so `filter`, `matcher`, failure diffs, and `result.expected` / `result.actual` all see raw output.
+
 If the reference command produces no output at all - usually a sign it failed to start rather than that its output is genuinely empty - `compare` raises `Backspin::ReferenceCommandError` instead of comparing empty to empty.
 
 ### Recording Modes
@@ -349,7 +351,7 @@ end
 
 If the CLI interaction you are recording contains sensitive data in stdout/stderr, you should be careful to make sure it is not recorded to YAML.
 
-By default, Backspin automatically tries to scrub common credential patterns from recorded stdout, stderr, args, env, and stdin values. Always review your record files before commiting them to source control.
+By default, Backspin automatically tries to scrub common credential patterns from recorded stdout, stderr, args, env, and stdin values. Always review your record files before commiting them to source control. `Backspin.compare` records nothing, so it does not scrub.
 
 ```ruby
 # This will automatically scrub AWS keys, API tokens, passwords, etc.
