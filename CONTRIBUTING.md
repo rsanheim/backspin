@@ -164,6 +164,11 @@ end
 
 ## Release Maintainer Setup
 
+The [shared setup and recovery guide](https://github.com/rsanheim/.github#readme)
+is the reference for adding new public gem repositories. In this repository,
+create the GitHub environment `release`, allowing `main`; leave required
+reviewers and wait timers off for automatic publication after merge.
+
 Before the first automated release, configure a RubyGems trusted publisher for the `backspin` gem using the [reusable workflow setup](https://guides.rubygems.org/trusted-publishing/#using-reusable-workflows):
 
 - Repository owner: `rsanheim`
@@ -176,6 +181,11 @@ Before the first automated release, configure a RubyGems trusted publisher for t
 The workflow filename identifies the shared reusable workflow. The caller is `.github/workflows/release.yml`, which grants GitHub OIDC permission (`id-token: write`). No long-lived RubyGems API key is needed.
 
 Release pull requests update `lib/backspin/version.rb` and add a nonempty `## VERSION` section to `CHANGELOG.md`; the section body becomes the GitHub release notes. Keep the version change and its notes in the same pull request. Use the normal premerge CI checks to establish release readiness. Merging to `main` starts the release workflow, which rechecks the version and changelog before publishing; invalid release notes prevent publication. Ordinary merges do not publish anything.
+
+Also synchronize Backspin's own version in `Gemfile.lock` and
+`fixtures/projects/dummy_cli_gem/Gemfile.lock`, including its checksum entry.
+Run the normal checks and `BUNDLE_FROZEN=true bundle exec rake build` before
+merging. A version bump should not update unrelated dependencies.
 
 If publication fails before the gem is uploaded, fix the cause and manually run the Release workflow on `main`, setting `previous-ref` to the tag before the version increase. Confirm the target version is still unpublished before retrying.
 
