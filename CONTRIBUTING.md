@@ -175,7 +175,7 @@ Before the first automated release, configure a RubyGems trusted publisher for t
 
 The workflow filename identifies the shared reusable workflow. The caller is `.github/workflows/release.yml`, which grants GitHub OIDC permission (`id-token: write`). No long-lived RubyGems API key is needed.
 
-Release pull requests update `lib/backspin/version.rb` and add a nonempty `## VERSION` section to `CHANGELOG.md`; the section body becomes the GitHub release notes. Keep the version change and its notes in the same pull request. Merging to `main` releases only after the required CircleCI checks succeed for the merge commit. Ordinary merges do not publish anything.
+Release pull requests update `lib/backspin/version.rb` and add a nonempty `## VERSION` section to `CHANGELOG.md`; the section body becomes the GitHub release notes. Keep the version change and its notes in the same pull request. Use the normal premerge CI checks to establish release readiness. Merging to `main` starts the release workflow, which rechecks the version and changelog before publishing; invalid release notes prevent publication. Ordinary merges do not publish anything.
 
 The shared release workflow is pinned in `.github/workflows/release.yml`. Update that commit deliberately when adopting shared release changes. Bundler's standard `build`, `install`, and `release` tasks remain available; the automated workflow is the normal publishing path.
 

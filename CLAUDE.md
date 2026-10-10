@@ -27,7 +27,7 @@ bin/rake install     # Install gem locally for testing
 bin/rake build       # Build the gem locally
 ```
 
-Releases use a pull request that updates `lib/backspin/version.rb` and adds a matching nonempty section to `CHANGELOG.md`. After merge to `main`, the shared GitHub Actions workflow waits for CircleCI on the exact commit, tags it, and publishes to RubyGems and GitHub. See `CONTRIBUTING.md` for trusted publisher setup.
+Releases use a pull request that updates `lib/backspin/version.rb` and adds a matching nonempty section to `CHANGELOG.md`. Use normal premerge CI to establish readiness. After merge to `main`, the shared GitHub Actions workflow rechecks the version and changelog, tags the commit, and publishes to RubyGems and GitHub. Invalid release notes prevent publication. See `CONTRIBUTING.md` for trusted publisher setup.
 
 ### Code Quality
 ```bash

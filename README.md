@@ -376,7 +376,7 @@ To install this gem onto your local machine, run `bundle exec rake install`.
 
 Open a pull request that updates `lib/backspin/version.rb` and adds a nonempty matching version section to `CHANGELOG.md` (for example, `## 0.14.0`). CI checks the effective gemspec version and fails if a version change has no release notes.
 
-After the pull request merges into `main`, the release workflow waits for all CircleCI checks on that exact commit: Ruby 3.2, 3.3, 3.4, and 4.0 tests, plus lint. It then creates the `vVERSION` tag, publishes the gem with RubyGems trusted publishing, and creates a GitHub release using that changelog section. Commits that leave the gem version unchanged do not trigger a release.
+Use the normal premerge CI checks to establish release readiness. After the pull request merges into `main`, the release workflow rechecks the version and changelog, creates the `vVERSION` tag, publishes the gem with RubyGems trusted publishing, and creates a GitHub release using that changelog section. Invalid release notes prevent publication. Commits that leave the gem version unchanged do not trigger a release.
 
 The release implementation lives in [`rsanheim/.github`](https://github.com/rsanheim/.github) and is pinned to a commit in `.github/workflows/release.yml`. See [the maintainer setup](CONTRIBUTING.md#release-maintainer-setup) before enabling releases.
 
