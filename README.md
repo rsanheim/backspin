@@ -374,11 +374,9 @@ To install this gem onto your local machine, run `bundle exec rake install`.
 
 ### Releasing
 
-Open a pull request that updates `lib/backspin/version.rb` and adds a nonempty matching version section to `CHANGELOG.md` (for example, `## 0.14.0`). CI checks the effective gemspec version and fails if a version change has no release notes.
-
-Use the normal premerge CI checks to establish release readiness. After the pull request merges into `main`, the shared workflow rechecks the version and changelog, then invokes `rubygems/release-gem@v1`. The official action uses OIDC trusted publishing and Bundler's standard release task to build the gem, create and push `vVERSION`, and publish to RubyGems. After the action succeeds, the shared workflow creates a GitHub release using that changelog section. Invalid release notes prevent publication. Commits that leave the gem version unchanged do not trigger a release.
-
-The release implementation lives in [`rsanheim/.github`](https://github.com/rsanheim/.github) and is pinned to a commit in `.github/workflows/release.yml`. See [the maintainer setup](CONTRIBUTING.md#release-maintainer-setup) before enabling releases.
+See the [shared release guide](https://github.com/rsanheim/.github#readme) for
+setup and operation, and the [Backspin quick reference](CONTRIBUTING.md#release-maintainer-setup)
+for the files to update in a release PR.
 
 ## Contributing
 
