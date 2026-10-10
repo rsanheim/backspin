@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+* Fixed `backspin_dir` configuration to accept String paths as well as Pathname objects.
+
 ## 0.13.0
 * Added `Backspin.compare(reference:, actual:)` for differential testing - runs both commands live and compares their filtered output, with no record file. Only stdout, stderr, and exit status are compared, so the two commands may differ in argv and env without normalization.
 * Added `Backspin::ReferenceCommandError`, raised when a compare's reference command produces no output at all (usually a sign it failed to start), rather than comparing empty to empty.
