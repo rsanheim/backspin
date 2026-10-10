@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
-* Improved verification errors with per-field summaries, three lines of diff context, and a 50-line limit (`BACKSPIN_FULL_DIFF=1` disables the limit).
-* Preserved custom matcher failure reasons and marked output missing a final newline.
+## 0.14.0
+* Improved verification errors with per-field summaries for stdout, stderr, and exit status, plus three lines of context around output changes. Long diffs are limited to 50 lines; set `BACKSPIN_FULL_DIFF=1` to show the full diff.
+* Preserved custom matcher failure reasons and made missing final newlines visible in output diffs.
 * Fixed `backspin_dir` configuration to accept String paths as well as Pathname objects.
 
 ## 0.13.0
