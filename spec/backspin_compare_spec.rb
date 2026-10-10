@@ -111,6 +111,75 @@ RSpec.describe "Backspin.compare" do
     expect(result.actual.stdout).to eq("howdy")
   end
 
+  it "pipes the same stdin to both commands" do
+    result = Backspin.compare(
+      reference: ["cat"],
+      actual: ["sh", "-c", "read x; printf %s \"$x\""],
+      stdin: "shared payload"
+    )
+
+    expect(result.verified?).to be(true)
+    expect(result.actual.stdout).to eq("shared payload")
+    expect(result.expected.stdin).to eq("shared payload")
+    expect(result.actual.stdin).to eq("shared payload")
+  end
+
+  it "verifies when per-side stdin produces equivalent output" do
+    result = Backspin.compare(
+      reference: ["wc", "-c"],
+      actual: ["wc", "-c"],
+      stdin: {reference: "abc", actual: "xyz"}
+    )
+
+    expect(result.verified?).to be(true)
+    expect(result.expected.stdin).to eq("abc")
+    expect(result.actual.stdin).to eq("xyz")
+  end
+
+  it "fails when per-side stdin produces different output" do
+    Backspin.configure { |config| config.raise_on_verification_failure = false }
+
+    result = Backspin.compare(
+      reference: ["cat"],
+      actual: ["cat"],
+      stdin: {reference: "one", actual: "two"}
+    )
+
+    expect(result.verified?).to be(false)
+    expect(result.expected.stdout).to eq("one")
+    expect(result.actual.stdout).to eq("two")
+  end
+
+  it "gives no stdin to a side missing from the per-side hash" do
+    result = Backspin.compare(
+      reference: ["printf", "hello"],
+      actual: ["cat"],
+      stdin: {actual: "hello"}
+    )
+
+    expect(result.verified?).to be(true)
+    expect(result.expected.stdin).to be_nil
+    expect(result.actual.stdin).to eq("hello")
+  end
+
+  it "rejects unknown keys in a per-side stdin hash" do
+    expect {
+      Backspin.compare(reference: ["cat"], actual: ["cat"], stdin: {reference: "a", expected: "b"})
+    }.to raise_error(ArgumentError, /stdin hash keys must be :reference and\/or :actual, got \[:reference, :expected\]/)
+  end
+
+  it "rejects non-string values in a per-side stdin hash" do
+    expect {
+      Backspin.compare(reference: ["cat"], actual: ["cat"], stdin: {reference: "a", actual: 1})
+    }.to raise_error(ArgumentError, /stdin must be a String, got Integer/)
+  end
+
+  it "rejects stdin that is neither a String nor a Hash" do
+    expect {
+      Backspin.compare(reference: ["cat"], actual: ["cat"], stdin: ["a"])
+    }.to raise_error(ArgumentError, /stdin must be a String or a Hash with :reference and\/or :actual, got Array/)
+  end
+
   it "raises when the reference command produces no output" do
     expect {
       Backspin.compare(

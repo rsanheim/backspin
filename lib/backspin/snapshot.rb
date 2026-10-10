@@ -3,12 +3,13 @@
 module Backspin
   # Represents a single captured execution snapshot.
   class Snapshot
-    attr_reader :command_type, :args, :env, :stdout, :stderr, :status, :recorded_at
+    attr_reader :command_type, :args, :env, :stdin, :stdout, :stderr, :status, :recorded_at
 
-    def initialize(command_type:, args:, env: nil, stdout: "", stderr: "", status: 0, recorded_at: nil)
+    def initialize(command_type:, args:, env: nil, stdin: nil, stdout: "", stderr: "", status: 0, recorded_at: nil)
       @command_type = command_type
       @args = sanitize_args(args)
       @env = env.nil? ? nil : sanitize_env(env)
+      @stdin = stdin.nil? ? nil : Backspin.scrub_text(stdin.dup).freeze
       @stdout = Backspin.scrub_text((stdout || "").dup).freeze
       @stderr = Backspin.scrub_text((stderr || "").dup).freeze
       @status = status || 0
@@ -42,6 +43,7 @@ module Backspin
         command_type: command_type,
         args: data["args"],
         env: data["env"],
+        stdin: data["stdin"],
         stdout: data["stdout"],
         stderr: data["stderr"],
         status: data["status"],
@@ -61,6 +63,7 @@ module Backspin
         "recorded_at" => recorded_at
       }
       data["env"] = env if env
+      data["stdin"] = stdin if stdin
       deep_freeze(data)
     end
 

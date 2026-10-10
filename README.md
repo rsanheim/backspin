@@ -92,6 +92,18 @@ result.verified?        # true when they match
 
 Only stdout, stderr, and exit status are compared, so the two commands can differ in argv and environment without any normalization. `filter` and `matcher` work exactly as they do for `Backspin.run`, and a mismatch raises `Backspin::VerificationError` unless `raise_on_verification_failure` is disabled.
 
+Pass `stdin:` to pipe the same data into both commands, or a Hash to give each side its own payload. A side left out of the Hash gets no stdin:
+
+```ruby
+Backspin.compare(reference: ["jq", "."], actual: ["my-jq", "."], stdin: '{"a": 1}')
+
+Backspin.compare(
+  reference: ["wc", "-c"],
+  actual: ["wc", "-c"],
+  stdin: {reference: "abc", actual: "xyz"}
+)
+```
+
 If the reference command produces no output at all - usually a sign it failed to start rather than that its output is genuinely empty - `compare` raises `Backspin::ReferenceCommandError` instead of comparing empty to empty.
 
 ### Recording Modes
@@ -163,6 +175,14 @@ Backspin.run(
 ```
 
 If `env:` is not provided, it is not passed to `Open3.capture3` and is not recorded.
+
+### Standard Input
+
+```ruby
+Backspin.run(["cat"], name: "with_stdin", stdin: "hello from stdin")
+```
+
+`stdin:` must be a String. It is passed to `Open3.capture3` as `stdin_data:` and saved in the record, but only stdout, stderr, and exit status are verified. If `stdin:` is not provided, nothing is passed and no `stdin` key is recorded. `stdin:` is not supported with the block form.
 
 ### Custom Matchers
 
@@ -331,7 +351,7 @@ end
 
 If the CLI interaction you are recording contains sensitive data in stdout/stderr, you should be careful to make sure it is not recorded to YAML.
 
-By default, Backspin automatically tries to scrub common credential patterns from recorded stdout, stderr, args, and env values. Always review your record files before commiting them to source control.
+By default, Backspin automatically tries to scrub common credential patterns from recorded stdout, stderr, args, env, and stdin values. Always review your record files before commiting them to source control.
 
 ```ruby
 # This will automatically scrub AWS keys, API tokens, passwords, etc.

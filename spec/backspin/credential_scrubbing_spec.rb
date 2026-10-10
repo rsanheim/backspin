@@ -74,6 +74,13 @@ RSpec.describe "Backspin credential scrubbing" do
     expect(record_data["snapshot"]["env"]).to eq({"AWS_ACCESS_KEY_ID" => "********************"})
   end
 
+  it "scrubs credentials in stdin" do
+    result = Backspin.run(["wc", "-c"], name: "stdin_scrub", stdin: "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE")
+
+    record_data = YAML.load_file(result.record_path)
+    expect(record_data["snapshot"]["stdin"]).to eq("AWS_ACCESS_KEY_ID=********************")
+  end
+
   it "scrubs credentials in nested args and hashes" do
     api_key = "API_KEY=sk-1234567890abcdef1234567890abcdef"
     snapshot = Backspin::Snapshot.new(

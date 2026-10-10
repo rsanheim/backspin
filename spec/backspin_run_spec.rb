@@ -38,6 +38,37 @@ RSpec.describe "Backspin.run" do
     expect(snapshot).not_to have_key("env")
   end
 
+  it "pipes stdin to the command and records it" do
+    result = Backspin.run(["cat"], name: "command_with_stdin", stdin: "hello from stdin")
+
+    expect(result).to be_recorded
+    expect(result.actual.stdout).to eq("hello from stdin")
+    expect(result.actual.stdin).to eq("hello from stdin")
+
+    record_path = Backspin.configuration.backspin_dir.join("command_with_stdin.yml")
+    snapshot = YAML.load_file(record_path)["snapshot"]
+    expect(snapshot["stdin"]).to eq("hello from stdin")
+  end
+
+  it "verifies a command run with stdin" do
+    Backspin.run(["sh", "-c", "read x; echo got:$x"], name: "verify_with_stdin", stdin: "ping\n")
+
+    result = Backspin.run(["sh", "-c", "read x; echo got:$x"], name: "verify_with_stdin", stdin: "ping\n")
+
+    expect(result).to be_verified
+    expect(result.expected.stdin).to eq("ping\n")
+    expect(result.actual.stdout).to eq("got:ping\n")
+  end
+
+  it "does not record stdin when stdin is not provided" do
+    result = Backspin.run(["echo", "no stdin"], name: "command_no_stdin")
+
+    expect(result.actual.stdin).to be_nil
+    record_path = Backspin.configuration.backspin_dir.join("command_no_stdin.yml")
+    snapshot = YAML.load_file(record_path)["snapshot"]
+    expect(snapshot).not_to have_key("stdin")
+  end
+
   it "records string commands as strings" do
     Backspin.run("echo hello", name: "string_command")
 
@@ -188,6 +219,20 @@ RSpec.describe "Backspin.run" do
         puts "hi"
       end
     end.to raise_error(ArgumentError, /env is not supported when using a block/)
+  end
+
+  it "rejects non-string stdin values" do
+    expect do
+      Backspin.run(["cat"], name: "bad_stdin", stdin: 123)
+    end.to raise_error(ArgumentError, /stdin must be a String, got Integer/)
+  end
+
+  it "rejects stdin when using a block" do
+    expect do
+      Backspin.run(name: "block_stdin", stdin: "payload") do
+        puts "hi"
+      end
+    end.to raise_error(ArgumentError, /stdin is not supported when using a block/)
   end
 
   it "raises when verifying without a record" do
