@@ -10,9 +10,9 @@ module Backspin
       @command_type = command_type
       @args = sanitize_args(args)
       @env = env.nil? ? nil : sanitize_env(env)
-      @stdin = scrub_output((stdin || "").dup).freeze
-      @stdout = scrub_output((stdout || "").dup).freeze
-      @stderr = scrub_output((stderr || "").dup).freeze
+      @stdin = scrub_string((stdin || "").dup).freeze
+      @stdout = scrub_string((stdout || "").dup).freeze
+      @stderr = scrub_string((stderr || "").dup).freeze
       @status = status || 0
       @recorded_at = recorded_at.nil? ? nil : recorded_at.dup.freeze
       @serialized_hash = build_serialized_hash
@@ -68,29 +68,29 @@ module Backspin
       deep_freeze(data)
     end
 
-    def scrub_output(text)
+    def scrub_string(text)
       @scrub ? Backspin.scrub_text(text) : text
     end
 
     def scrub_args(value)
-      return value unless @scrub && Backspin.configuration.scrub_credentials && value
+      return value unless Backspin.configuration.scrub_credentials && value
 
       case value
       when String
-        Backspin.scrub_text(value)
+        scrub_string(value)
       when Array
         value.map { |entry| scrub_args(entry) }
       when Hash
-        value.transform_values { |entry| entry.is_a?(String) ? Backspin.scrub_text(entry) : entry }
+        value.transform_values { |entry| entry.is_a?(String) ? scrub_string(entry) : entry }
       else
         value
       end
     end
 
     def scrub_env(value)
-      return value unless @scrub && Backspin.configuration.scrub_credentials && value
+      return value unless Backspin.configuration.scrub_credentials && value
 
-      value.transform_values { |entry| entry.is_a?(String) ? Backspin.scrub_text(entry) : entry }
+      value.transform_values { |entry| entry.is_a?(String) ? scrub_string(entry) : entry }
     end
 
     def sanitize_args(value)

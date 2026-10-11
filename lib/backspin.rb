@@ -132,9 +132,7 @@ module Backspin
     # Either side may be a Hash of {command:, stdin:} to pipe data into that
     # command's stdin. Stdin is recorded on each snapshot, not compared.
     #
-    # Credentials are not scrubbed: nothing is written to disk, and scrubbing
-    # before comparing can hide real differences. The filter, matcher, diff,
-    # and result snapshots all see raw output.
+    # Credentials are not scrubbed, so the filter, matcher, and diff see raw output.
     #
     # @param reference [String, Array, Hash] Command that defines the correct output
     # @param actual [String, Array, Hash] Command under test

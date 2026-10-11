@@ -351,7 +351,7 @@ end
 
 If the CLI interaction you are recording contains sensitive data in stdout/stderr, you should be careful to make sure it is not recorded to YAML.
 
-By default, Backspin automatically tries to scrub common credential patterns from recorded stdout, stderr, args, env, and stdin values. Always review your record files before commiting them to source control. `Backspin.compare` records nothing, so it does not scrub.
+By default, Backspin automatically tries to scrub common credential patterns from recorded stdout, stderr, args, env, and stdin values. Always review your record files before commiting them to source control. `Backspin.compare` records nothing, so it never scrubs, regardless of `scrub_credentials` or custom patterns, and its failure messages show raw output.
 
 ```ruby
 # This will automatically scrub AWS keys, API tokens, passwords, etc.
