@@ -129,8 +129,9 @@ module Backspin
     # Only stdout, stderr, and status are compared, so the two commands may
     # differ in argv and env without any normalization.
     #
-    # Either side may be a Hash of {command:, stdin:} to pipe data into that
-    # command's stdin. Stdin is recorded on each snapshot, not compared.
+    # Either side may be a Hash of {command:, env:, stdin:} to give that command
+    # its own env or stdin. A side's env replaces the top-level env for that
+    # side. Stdin is recorded on each snapshot, not compared.
     #
     # Credentials are not scrubbed, so the filter, matcher, and diff see raw output.
     #
@@ -141,18 +142,18 @@ module Backspin
     # @param filter [Proc] Custom filter applied to both sides before comparing
     # @return [BackspinResult] expected = reference, actual = command under test
     def compare(reference:, actual:, env: nil, matcher: nil, filter: nil)
-      normalized_env = normalize_env(env)
+      reference_command, reference_env, reference_stdin = reference.is_a?(Hash) ? reference.values_at(:command, :env, :stdin) : [reference, nil, nil]
+      actual_command, actual_env, actual_stdin = actual.is_a?(Hash) ? actual.values_at(:command, :env, :stdin) : [actual, nil, nil]
+      reference_env = normalize_env(reference_env || env)
+      actual_env = normalize_env(actual_env || env)
 
-      reference_command, reference_stdin = reference.is_a?(Hash) ? reference.values_at(:command, :stdin) : [reference, nil]
-      actual_command, actual_stdin = actual.is_a?(Hash) ? actual.values_at(:command, :stdin) : [actual, nil]
-
-      expected_snapshot, = capture_command_snapshot(reference_command, normalized_env, reference_stdin, scrub: false)
+      expected_snapshot, = capture_command_snapshot(reference_command, reference_env, reference_stdin, scrub: false)
       if expected_snapshot.stdout.empty? && expected_snapshot.stderr.empty?
         raise ReferenceCommandError,
           "Reference command produced no output (exit status #{expected_snapshot.status}): #{reference.inspect}"
       end
 
-      actual_snapshot, = capture_command_snapshot(actual_command, normalized_env, actual_stdin, scrub: false)
+      actual_snapshot, = capture_command_snapshot(actual_command, actual_env, actual_stdin, scrub: false)
 
       command_diff = CommandDiff.new(
         expected: expected_snapshot,

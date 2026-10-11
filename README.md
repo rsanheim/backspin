@@ -101,6 +101,15 @@ Backspin.compare(
 )
 ```
 
+A side Hash can also take `env:`, which replaces the top-level `env:` for that side:
+
+```ruby
+Backspin.compare(
+  reference: {command: ["jq", "."], env: {"HOME" => reference_home}},
+  actual: {command: ["my-jq", "."], env: {"HOME" => actual_home}}
+)
+```
+
 `compare` records nothing, so it does not scrub credentials. Filters, matchers, and failure diffs see raw output.
 
 If the reference command produces no output at all - usually a sign it failed to start rather than that its output is genuinely empty - `compare` raises `Backspin::ReferenceCommandError` instead of comparing empty to empty.
