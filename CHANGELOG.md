@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.15.0
 * Added `stdin:` to `Backspin.run` and `Backspin.compare` to pipe a String into the command, replacing `sh -c` wrappers. For `compare`, give a side as `{command:, stdin:}`. Stdin is saved on every snapshot like stdout and stderr (empty when not given), so re-recorded files gain a `stdin` line, but it is not compared.
 * Changed `Backspin.compare` to skip credential scrubbing, so filters, matchers, and diffs see raw output and scrubbing can no longer hide mismatches (generic patterns could turn different paths into identical star runs). `run` and `capture` still scrub.
 * Added `env:` to `Backspin.compare` side Hashes (`{command:, env:, stdin:}`), so each command can get its own environment. A side's env replaces the top-level `env:` for that side, and each snapshot records the env it ran with.
