@@ -132,6 +132,8 @@ module Backspin
     # Either side may be a Hash of {command:, stdin:} to pipe data into that
     # command's stdin. Stdin is recorded on each snapshot, not compared.
     #
+    # Credentials are not scrubbed, so the filter, matcher, and diff see raw output.
+    #
     # @param reference [String, Array, Hash] Command that defines the correct output
     # @param actual [String, Array, Hash] Command under test
     # @param env [Hash] Environment variables passed to both commands
@@ -144,13 +146,13 @@ module Backspin
       reference_command, reference_stdin = reference.is_a?(Hash) ? reference.values_at(:command, :stdin) : [reference, nil]
       actual_command, actual_stdin = actual.is_a?(Hash) ? actual.values_at(:command, :stdin) : [actual, nil]
 
-      expected_snapshot, = capture_command_snapshot(reference_command, normalized_env, reference_stdin)
+      expected_snapshot, = capture_command_snapshot(reference_command, normalized_env, reference_stdin, scrub: false)
       if expected_snapshot.stdout.empty? && expected_snapshot.stderr.empty?
         raise ReferenceCommandError,
           "Reference command produced no output (exit status #{expected_snapshot.status}): #{reference.inspect}"
       end
 
-      actual_snapshot, = capture_command_snapshot(actual_command, normalized_env, actual_stdin)
+      actual_snapshot, = capture_command_snapshot(actual_command, normalized_env, actual_stdin, scrub: false)
 
       command_diff = CommandDiff.new(
         expected: expected_snapshot,
@@ -252,7 +254,7 @@ module Backspin
       result
     end
 
-    def capture_command_snapshot(command, env, stdin)
+    def capture_command_snapshot(command, env, stdin, scrub: configuration.scrub_credentials)
       stdout, stderr, status = execute_command(command, env, stdin)
       snapshot = Snapshot.new(
         command_type: Open3::Capture3,
@@ -262,7 +264,8 @@ module Backspin
         stdout: stdout,
         stderr: stderr,
         status: status.exitstatus,
-        recorded_at: Time.now.utc.iso8601
+        recorded_at: Time.now.utc.iso8601,
+        scrub: scrub
       )
       [snapshot, [stdout, stderr, status]]
     end
