@@ -5,7 +5,7 @@ module Backspin
   class Snapshot
     attr_reader :command_type, :args, :env, :stdin, :stdout, :stderr, :status, :recorded_at
 
-    def initialize(command_type:, args:, env: nil, stdin: "", stdout: "", stderr: "", status: 0, recorded_at: nil, scrub: true)
+    def initialize(command_type:, args:, env: nil, stdin: "", stdout: "", stderr: "", status: 0, recorded_at: nil, scrub: Backspin.configuration.scrub_credentials)
       @scrub = scrub
       @command_type = command_type
       @args = sanitize_args(args)
@@ -73,8 +73,6 @@ module Backspin
     end
 
     def scrub_args(value)
-      return value unless Backspin.configuration.scrub_credentials && value
-
       case value
       when String
         scrub_string(value)
@@ -88,8 +86,6 @@ module Backspin
     end
 
     def scrub_env(value)
-      return value unless Backspin.configuration.scrub_credentials && value
-
       value.transform_values { |entry| entry.is_a?(String) ? scrub_string(entry) : entry }
     end
 

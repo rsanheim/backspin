@@ -254,7 +254,7 @@ module Backspin
       result
     end
 
-    def capture_command_snapshot(command, env, stdin, scrub: true)
+    def capture_command_snapshot(command, env, stdin, scrub: configuration.scrub_credentials)
       stdout, stderr, status = execute_command(command, env, stdin)
       snapshot = Snapshot.new(
         command_type: Open3::Capture3,
