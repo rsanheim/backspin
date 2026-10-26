@@ -21,4 +21,4 @@ jobs:
     uses: rsanheim/.github/.github/workflows/gem-release.yml@4ced52859dd60019b930a3f2023424e77b37ee2a
     with:
       gem: backspin
-      ruby-version: "4.0.7"
+      ruby-version: "4.0.9"

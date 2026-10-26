@@ -35,11 +35,11 @@ jobs:
   lint:
     resource_class: medium
     docker:
-      - image: cimg/ruby:4.0
+      - image: cimg/ruby:4.0.9
     steps:
       - checkout
       - ruby/install-deps:
-          key: gems-v1-ruby4.0
+          key: gems-v1-ruby4.0.9
       - run:
           name: Run Standard Ruby linter
           command: bundle exec rake standard
@@ -50,5 +50,5 @@ workflows:
       - test:
           matrix:
             parameters:
-              ruby-version: ["3.3", "3.4", "4.0"]
+              ruby-version: ["3.3", "3.4", "4.0.9"]
       - lint
