@@ -8,6 +8,8 @@ Backspin is in early development and the API _will_ change before stabilizing at
 ```bash
 git clone https://github.com/rsanheim/backspin.git
 cd backspin
+mise install
+mise exec -- ruby -v
 bin/setup
 # run full build
 bin/rake spec
